@@ -81,10 +81,19 @@ const VerticalMenu = ({ dictionary, scrollMenu }: Props) => {
         renderExpandedMenuItemIcon={{ icon: <i className='tabler-circle text-xs' /> }}
         menuSectionStyles={menuSectionStyles(verticalNavOptions, theme)}
       >
+        
+       <MenuSection label='INCIO DO SISTEMA'>
+          <MenuItem href={`/${locale}/empresas/config`} icon={<i className='tabler-building-cog'/>} >Empresa</MenuItem>
+         </MenuSection>
+
+
+       {/* testes */ }
+
+<MenuSection label='PAGINAS TESTES'></MenuSection>
         <SubMenu
           label={dictionary['navigation'].dashboards}
           icon={<i className='tabler-smart-home' />}
-          suffix={<CustomChip label='5' size='small' color='error' round='true' />}
+          suffix={<CustomChip label='teste' size='small' color='secondary' round='true' />}
         >
           <MenuItem href={`/${locale}/dashboards/crm`}>{dictionary['navigation'].crm}</MenuItem>
           <MenuItem href={`/${locale}/dashboards/analytics`}>{dictionary['navigation'].analytics}</MenuItem>
@@ -92,7 +101,7 @@ const VerticalMenu = ({ dictionary, scrollMenu }: Props) => {
           <MenuItem href={`/${locale}/dashboards/academy`}>{dictionary['navigation'].academy}</MenuItem>
           <MenuItem href={`/${locale}/dashboards/logistics`}>{dictionary['navigation'].logistics}</MenuItem>
         </SubMenu>
-        <SubMenu label={dictionary['navigation'].frontPages} icon={<i className='tabler-files' />}>
+        <SubMenu label={dictionary['navigation'].frontPages} icon={<i className='tabler-files' />} suffix={<CustomChip label='teste' size='small' color='secondary' round='true' />}>
           <MenuItem href='/front-pages/landing-page' target='_blank'>
             {dictionary['navigation'].landing}
           </MenuItem>
@@ -109,10 +118,10 @@ const VerticalMenu = ({ dictionary, scrollMenu }: Props) => {
             {dictionary['navigation'].helpCenter}
           </MenuItem>
         </SubMenu>
-        <MenuSection label={dictionary['navigation'].appsPages}>
-          <SubMenu label={dictionary['navigation'].eCommerce} icon={<i className='tabler-shopping-cart' />}>
-            <MenuItem href={`/${locale}/apps/ecommerce/dashboard`}>{dictionary['navigation'].dashboard}</MenuItem>
-            <SubMenu label={dictionary['navigation'].products}>
+        <MenuSection label={dictionary['navigation'].appsPages} >
+          <SubMenu label={dictionary['navigation'].eCommerce} icon={<i className='tabler-shopping-cart' />} suffix={<CustomChip label='teste' size='small' color='secondary' round='true' />}>
+            <MenuItem href={`/${locale}/apps/ecommerce/dashboard`}>{dictionary['navigation'].dashboard} </MenuItem>
+            <SubMenu label={dictionary['navigation'].products} >
               <MenuItem href={`/${locale}/apps/ecommerce/products/list`}>{dictionary['navigation'].list}</MenuItem>
               <MenuItem href={`/${locale}/apps/ecommerce/products/add`}>{dictionary['navigation'].add}</MenuItem>
               <MenuItem href={`/${locale}/apps/ecommerce/products/category`}>
@@ -145,15 +154,15 @@ const VerticalMenu = ({ dictionary, scrollMenu }: Props) => {
             <MenuItem href={`/${locale}/apps/ecommerce/referrals`}>{dictionary['navigation'].referrals}</MenuItem>
             <MenuItem href={`/${locale}/apps/ecommerce/settings`}>{dictionary['navigation'].settings}</MenuItem>
           </SubMenu>
-          <SubMenu label={dictionary['navigation'].academy} icon={<i className='tabler-school' />}>
+          <SubMenu label={dictionary['navigation'].academy} icon={<i className='tabler-school' />} suffix={<CustomChip label='teste' size='small' color='secondary' round='true' />}>
             <MenuItem href={`/${locale}/apps/academy/dashboard`}>{dictionary['navigation'].dashboard}</MenuItem>
             <MenuItem href={`/${locale}/apps/academy/my-courses`}>{dictionary['navigation'].myCourses}</MenuItem>
             <MenuItem href={`/${locale}/apps/academy/course-details`}>
               {dictionary['navigation'].courseDetails}
             </MenuItem>
           </SubMenu>
-          <SubMenu label={dictionary['navigation'].logistics} icon={<i className='tabler-truck' />}>
-            <MenuItem href={`/${locale}/apps/logistics/dashboard`}>{dictionary['navigation'].dashboard}</MenuItem>
+          <SubMenu label={dictionary['navigation'].logistics} icon={<i className='tabler-truck' />} suffix={<CustomChip label='teste' size='small' color='secondary' round='true' />}>
+            <MenuItem href={`/${locale}/apps/logistics/dashboard`}>{dictionary['navigation'].dashboard} </MenuItem>
             <MenuItem href={`/${locale}/apps/logistics/fleet`}>{dictionary['navigation'].fleet}</MenuItem>
           </SubMenu>
           <MenuItem
@@ -161,19 +170,20 @@ const VerticalMenu = ({ dictionary, scrollMenu }: Props) => {
             icon={<i className='tabler-mail' />}
             exactMatch={false}
             activeUrl='/apps/email'
+            suffix={<CustomChip label='teste' size='small' color='secondary' round='true' />}
           >
             {dictionary['navigation'].email}
           </MenuItem>
-          <MenuItem href={`/${locale}/apps/chat`} icon={<i className='tabler-message-circle-2' />}>
+          <MenuItem href={`/${locale}/apps/chat`} icon={<i className='tabler-message-circle-2' />} suffix={<CustomChip label='teste' size='small' color='secondary' round='true' />}>
             {dictionary['navigation'].chat}
           </MenuItem>
-          <MenuItem href={`/${locale}/apps/calendar`} icon={<i className='tabler-calendar' />}>
+          <MenuItem href={`/${locale}/apps/calendar`} icon={<i className='tabler-calendar' />}suffix={<CustomChip label='teste' size='small' color='secondary' round='true' />}>
             {dictionary['navigation'].calendar}
           </MenuItem>
-          <MenuItem href={`/${locale}/apps/kanban`} icon={<i className='tabler-copy' />}>
+          <MenuItem href={`/${locale}/apps/kanban`} icon={<i className='tabler-copy' />} suffix={<CustomChip label='teste' size='small' color='secondary' round='true' />}>
             {dictionary['navigation'].kanban}
           </MenuItem>
-          <SubMenu label={dictionary['navigation'].invoice} icon={<i className='tabler-file-description' />}>
+          <SubMenu label={dictionary['navigation'].invoice} icon={<i className='tabler-file-description' />} suffix={<CustomChip label='teste' size='small' color='secondary' round='true' />}>
             <MenuItem href={`/${locale}/apps/invoice/list`}>{dictionary['navigation'].list}</MenuItem>
             <MenuItem
               href={`/${locale}/apps/invoice/preview/4987`}
@@ -187,21 +197,21 @@ const VerticalMenu = ({ dictionary, scrollMenu }: Props) => {
             </MenuItem>
             <MenuItem href={`/${locale}/apps/invoice/add`}>{dictionary['navigation'].add}</MenuItem>
           </SubMenu>
-          <SubMenu label={dictionary['navigation'].user} icon={<i className='tabler-user' />}>
+          <SubMenu label={dictionary['navigation'].user} icon={<i className='tabler-user' />} suffix={<CustomChip label='teste' size='small' color='secondary' round='true' />}>
             <MenuItem href={`/${locale}/apps/user/list`}>{dictionary['navigation'].list}</MenuItem>
             <MenuItem href={`/${locale}/apps/user/view`}>{dictionary['navigation'].view}</MenuItem>
           </SubMenu>
-          <SubMenu label={dictionary['navigation'].rolesPermissions} icon={<i className='tabler-lock' />}>
+          <SubMenu label={dictionary['navigation'].rolesPermissions} icon={<i className='tabler-lock' />} suffix={<CustomChip label='teste' size='small' color='secondary' round='true' />}>
             <MenuItem href={`/${locale}/apps/roles`}>{dictionary['navigation'].roles}</MenuItem>
             <MenuItem href={`/${locale}/apps/permissions`}>{dictionary['navigation'].permissions}</MenuItem>
           </SubMenu>
-          <SubMenu label={dictionary['navigation'].pages} icon={<i className='tabler-file' />}>
+          <SubMenu label={dictionary['navigation'].pages} icon={<i className='tabler-file' />} suffix={<CustomChip label='teste' size='small' color='secondary' round='true' />}>
             <MenuItem href={`/${locale}/pages/user-profile`}>{dictionary['navigation'].userProfile}</MenuItem>
             <MenuItem href={`/${locale}/pages/account-settings`}>{dictionary['navigation'].accountSettings}</MenuItem>
             <MenuItem href={`/${locale}/pages/faq`}>{dictionary['navigation'].faq}</MenuItem>
             <MenuItem href={`/${locale}/pages/pricing`}>{dictionary['navigation'].pricing}</MenuItem>
-            <SubMenu label={dictionary['navigation'].miscellaneous}>
-              <MenuItem href={`/${locale}/pages/misc/coming-soon`} target='_blank'>
+            <SubMenu label={dictionary['navigation'].miscellaneous}  >
+              <MenuItem href={`/${locale}/pages/misc/coming-soon`} target='_blank' >
                 {dictionary['navigation'].comingSoon}
               </MenuItem>
               <MenuItem href={`/${locale}/pages/misc/under-maintenance`} target='_blank'>
@@ -215,7 +225,7 @@ const VerticalMenu = ({ dictionary, scrollMenu }: Props) => {
               </MenuItem>
             </SubMenu>
           </SubMenu>
-          <SubMenu label={dictionary['navigation'].authPages} icon={<i className='tabler-shield-lock' />}>
+          <SubMenu label={dictionary['navigation'].authPages} icon={<i className='tabler-shield-lock' />} suffix={<CustomChip label='teste' size='small' color='secondary' round='true' />}>
             <SubMenu label={dictionary['navigation'].login}>
               <MenuItem href={`/${locale}/pages/auth/login-v1`} target='_blank'>
                 {dictionary['navigation'].loginV1}
@@ -224,7 +234,7 @@ const VerticalMenu = ({ dictionary, scrollMenu }: Props) => {
                 {dictionary['navigation'].loginV2}
               </MenuItem>
             </SubMenu>
-            <SubMenu label={dictionary['navigation'].register}>
+            <SubMenu label={dictionary['navigation'].register} >
               <MenuItem href={`/${locale}/pages/auth/register-v1`} target='_blank'>
                 {dictionary['navigation'].registerV1}
               </MenuItem>
@@ -268,7 +278,7 @@ const VerticalMenu = ({ dictionary, scrollMenu }: Props) => {
               </MenuItem>
             </SubMenu>
           </SubMenu>
-          <SubMenu label={dictionary['navigation'].wizardExamples} icon={<i className='tabler-dots' />}>
+          <SubMenu label={dictionary['navigation'].wizardExamples} icon={<i className='tabler-dots' />} suffix={<CustomChip label='teste' size='small' color='secondary' round='true' />}>
             <MenuItem href={`/${locale}/pages/wizard-examples/checkout`}>{dictionary['navigation'].checkout}</MenuItem>
             <MenuItem href={`/${locale}/pages/wizard-examples/property-listing`}>
               {dictionary['navigation'].propertyListing}
@@ -277,10 +287,10 @@ const VerticalMenu = ({ dictionary, scrollMenu }: Props) => {
               {dictionary['navigation'].createDeal}
             </MenuItem>
           </SubMenu>
-          <MenuItem href={`/${locale}/pages/dialog-examples`} icon={<i className='tabler-square' />}>
+          <MenuItem href={`/${locale}/pages/dialog-examples`} icon={<i className='tabler-square' />} suffix={<CustomChip label='teste' size='small' color='secondary' round='true' />}>
             {dictionary['navigation'].dialogExamples}
           </MenuItem>
-          <SubMenu label={dictionary['navigation'].widgetExamples} icon={<i className='tabler-chart-bar' />}>
+          <SubMenu label={dictionary['navigation'].widgetExamples} icon={<i className='tabler-chart-bar' />} suffix={<CustomChip label='teste' size='small' color='secondary' round='true' />}>
             <MenuItem href={`/${locale}/pages/widget-examples/basic`}>{dictionary['navigation'].basic}</MenuItem>
             <MenuItem href={`/${locale}/pages/widget-examples/advanced`}>{dictionary['navigation'].advanced}</MenuItem>
             <MenuItem href={`/${locale}/pages/widget-examples/statistics`}>
@@ -291,23 +301,25 @@ const VerticalMenu = ({ dictionary, scrollMenu }: Props) => {
           </SubMenu>
         </MenuSection>
         <MenuSection label={dictionary['navigation'].formsAndTables}>
-          <MenuItem href={`/${locale}/forms/form-layouts`} icon={<i className='tabler-layout' />}>
+          <MenuItem href={`/${locale}/forms/form-layouts`} icon={<i className='tabler-layout' />} suffix={<CustomChip label='teste' size='small' color='secondary' round='true' />}>
             {dictionary['navigation'].formLayouts}
           </MenuItem>
-          <MenuItem href={`/${locale}/forms/form-validation`} icon={<i className='tabler-checkup-list' />}>
+          <MenuItem href={`/${locale}/forms/form-validation`} icon={<i className='tabler-checkup-list' />} suffix={<CustomChip label='teste' size='small' color='secondary' round='true' />}>
             {dictionary['navigation'].formValidation}
           </MenuItem>
-          <MenuItem href={`/${locale}/forms/form-wizard`} icon={<i className='tabler-git-merge' />}>
+          <MenuItem href={`/${locale}/forms/form-wizard`} icon={<i className='tabler-git-merge' />} suffix={<CustomChip label='teste' size='small' color='secondary' round='true' />}>
             {dictionary['navigation'].formWizard}
           </MenuItem>
-          <MenuItem href={`/${locale}/react-table`} icon={<i className='tabler-table' />}>
+          <MenuItem href={`/${locale}/react-table`} icon={<i className='tabler-table' />} suffix={<CustomChip label='teste' size='small' color='secondary' round='true' />}>
             {dictionary['navigation'].reactTable}
           </MenuItem>
           <MenuItem
             icon={<i className='tabler-checkbox' />}
             href={`${process.env.NEXT_PUBLIC_DOCS_URL}/docs/user-interface/form-elements`}
             suffix={<i className='tabler-external-link text-xl' />}
+            
             target='_blank'
+            
           >
             {dictionary['navigation'].formELements}
           </MenuItem>
@@ -321,7 +333,7 @@ const VerticalMenu = ({ dictionary, scrollMenu }: Props) => {
           </MenuItem>
         </MenuSection>
         <MenuSection label={dictionary['navigation'].chartsMisc}>
-          <SubMenu label={dictionary['navigation'].charts} icon={<i className='tabler-chart-donut-2' />}>
+          <SubMenu label={dictionary['navigation'].charts} icon={<i className='tabler-chart-donut-2' />} suffix={<CustomChip label='teste' size='small' color='secondary' round='true' />} >
             <MenuItem href={`/${locale}/charts/apex-charts`}>{dictionary['navigation'].apex}</MenuItem>
             <MenuItem href={`/${locale}/charts/recharts`}>{dictionary['navigation'].recharts}</MenuItem>
           </SubMenu>
@@ -365,7 +377,7 @@ const VerticalMenu = ({ dictionary, scrollMenu }: Props) => {
           >
             {dictionary['navigation'].documentation}
           </MenuItem>
-          <SubMenu label={dictionary['navigation'].others} icon={<i className='tabler-box' />}>
+          <SubMenu label={dictionary['navigation'].others} icon={<i className='tabler-box' />} suffix={<CustomChip label='teste' size='small' color='secondary' round='true' />}>
             <MenuItem suffix={<CustomChip label='New' size='small' color='info' round='true' />}>
               {dictionary['navigation'].itemWithBadge}
             </MenuItem>
@@ -376,7 +388,7 @@ const VerticalMenu = ({ dictionary, scrollMenu }: Props) => {
             >
               {dictionary['navigation'].externalLink}
             </MenuItem>
-            <SubMenu label={dictionary['navigation'].menuLevels}>
+            <SubMenu label={dictionary['navigation'].menuLevels} >
               <MenuItem>{dictionary['navigation'].menuLevel2}</MenuItem>
               <SubMenu label={dictionary['navigation'].menuLevel2}>
                 <MenuItem>{dictionary['navigation'].menuLevel3}</MenuItem>
