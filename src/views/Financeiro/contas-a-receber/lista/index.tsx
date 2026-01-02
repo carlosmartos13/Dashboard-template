@@ -1,34 +1,53 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react' // <--- Adicione useEffect
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation' // <--- Adicione useRouter (IMPORTANTE: de next/navigation)
 
 // MUI Imports
-import Grid from '@mui/material/Grid'
-import VendasRelatorioTable from './tabela' // (Seu VendasRelatorioTable.tsx)
+import Grid from '@mui/material/Grid' // Confirme se é Grid ou Grid2 no seu MUI v7
+import VendasRelatorioTable from './tabela'
 import VendasCardsResumo from './VendasCardsResumo'
-import VendasFilterCard from './VendasFilterCard' // <--- Novo Import
-import type { UsersType } from '@/types/apps/userTypes'
+import VendasFilterCard from './VendasFilterCard'
 
-const Financeirolista = ({ userData }: { userData?: UsersType[] }) => {
-  // Estado Global da Data (Começa hoje)
+const Financeirolista = () => {
+  const { data: session, status } = useSession()
+  const router = useRouter() // <--- Instância do roteador
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
 
+  // Lógica de Redirecionamento (Efeito Colateral)
+  useEffect(() => {
+    // Só executa quando terminar de carregar a sessão
+    if (status === 'loading') return
+
+    // Verifica se NÃO tem sessão OU se o cargo está errado
+    const isAuthorized = session?.user && (session.user.role === 'FINANCEIRO' || session.user.role === 'SUPER_ADMIN')
+    console.log('Usuário autorizado:', isAuthorized, session?.user)
+
+    if (!isAuthorized) {
+      // Redireciona para a página bonitona do template
+      router.replace('/pt_BR/401-not-authorized')
+    }
+  }, [session, status, router])
+
+  // Enquanto carrega ou se não estiver autorizado, não mostra NADA (ou um spinner)
+  // Isso evita que a página "pisque" o conteúdo proibido antes de redirecionar
+  if (status === 'loading' || !session || (session.user.role !== 'FINANCEIRO' && session.user.role !== 'SUPER_ADMIN')) {
+    return null // Retornar null deixa a tela em branco enquanto redireciona
+  }
+
+  // --- SEU CONTEÚDO ORIGINAL ---
   return (
-    <Grid container spacing={12}>
-      {/* LINHA 1: Cards de Resumo + Filtro */}
-      <Grid size={{ xs: 6, md: 6 }}>
-        {/* Passamos a data para os cards saberem o que calcular */}
+    <Grid container spacing={6}>
+      <Grid size={{ xs: 12, md: 6 }}>
         <VendasCardsResumo empresaId={1} selectedDate={selectedDate} />
       </Grid>
 
-      <Grid size={{ xs: 6, md: 5 }}>
-        {/* O Filtro controla a data */}
+      <Grid size={{ xs: 12, md: 6 }}>
         <VendasFilterCard date={selectedDate} setDate={setSelectedDate} />
       </Grid>
 
-      {/* LINHA 2: Tabela */}
-      <Grid size={{ xs: 12, md: 12 }}>
-        {/* A tabela também reage à data */}
+      <Grid size={{ xs: 12 }}>
         <VendasRelatorioTable empresaId={1} selectedDate={selectedDate} />
       </Grid>
     </Grid>

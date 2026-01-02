@@ -114,8 +114,8 @@ const Login = ({ mode }: { mode: SystemMode }) => {
   } = useForm<FormData>({
     resolver: valibotResolver(schema),
     defaultValues: {
-      email: 'admin@vuexy.com',
-      password: 'admin'
+      email: '',
+      password: ''
     }
   })
 

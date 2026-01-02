@@ -8,86 +8,16 @@ generator client {
   binaryTargets   = ["native", "debian-openssl-3.0.x", "linux-arm64-openssl-1.1.x", "rhel-openssl-3.0.x"]
 }
 
-model PdvIntegration {
-  id           Int      @id @default(autoincrement())
-  username     String
-  password     String
-  clientId     String
-  clientSecret String
-  accessToken  String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
 
-  @@map("pdv_integrations")
-}
+// configuração inicial de usuarios
 
-model Company {
-  id        Int     @id @default(autoincrement())
-  cnpj      String  @unique
-  name      String  // Razão Social
-  tradeName String? // Nome Fantasia
-  email     String?
-
-  // Endereço
-  cep          String?
-  street       String?
-  number       String?
-  complement   String?
-  neighborhood String?
-  city         String?
-  state        String?
-  country      String?
-  
-  contaAzul      IntegracaoContaAzul?
-  clientesCA     ContaAzulCliente[]
-  recebimentosCA ContaAzulRecebimento[]
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("companies")
-}
-
-// Armazena os grupos (PAIZAO ESPETINHOS, BEBIDAS, etc)
-model PdvLicencaGrupo {
-  id           Int      @id @default(autoincrement())
-  codGrupo     Int      @unique 
-  nome         String   
-  documento    String?  
-  ativo        Boolean
-  produto      String?  
-  qtdLojasAtivas    Int
-  qtdLojasDesativadas Int
-  dataCadastroApi   DateTime? 
-
-  filiais           PdvLicencaFilial[]
-
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  @@map("pdv_licenca_grupos")
-}
-
-// Armazena as filiais dentro de cada grupo
-model PdvLicencaFilial {
-  id           Int      @id @default(autoincrement())
-  sistema      String?  @default("PDVLEGAL")
-  codGrupo     Int
-  codFilial    Int      @unique 
-  nome         String   
-  documento    String?  
-  ativo        Boolean
-  matriz       Boolean  
-  email        String?
-  dataCadastroApi  DateTime? 
-
-  grupoId          Int
-  grupo            PdvLicencaGrupo @relation(fields: [grupoId], references: [id], onDelete: Cascade)
-
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  @@map("pdv_licenca_filiais")
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  FINANCEIRO
+  SUPORTE
+  ATENDENTE
+  REGISTRADO
 }
 
 model Account {
@@ -108,7 +38,7 @@ model Account {
 
   @@unique([provider, providerAccountId])
 }
-
+//sessão de login
 model Session {
   id           String   @id @default(cuid())
   sessionToken String   @unique
@@ -116,17 +46,19 @@ model Session {
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
-
+// dados dos usuarios
 model User {
   id            String    @id @default(cuid())
   name          String?
   email         String?   @unique
+  password      String?
+role          Role      @default(REGISTRADO)
   emailVerified DateTime?
   image         String?
   accounts      Account[]
   sessions      Session[]
 }
-
+// tokenisação
 model VerificationToken {
   identifier String
   token      String   @unique
@@ -135,12 +67,9 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-// --- ALTERAÇÃO AQUI ---
-// Removemos clientId e clientSecret do banco.
-// Mantemos apenas os tokens de acesso.
 model IntegracaoContaAzul {
   id           String   @id @default(uuid())
-  
+
   accessToken  String?  @db.Text
   refreshToken String?  @db.Text
   expiresIn    Int?
@@ -153,53 +82,53 @@ model IntegracaoContaAzul {
 }
 
 model ContaAzulCliente {
-  id              String   @id @default(uuid()) 
-  caId            String   @unique             
-  idLegado        Int?                          
-  uuidLegado      String?                       
+  id              String   @id @default(uuid())
+  caId            String   @unique
+  idLegado        Int?
+  uuidLegado      String?
   nome            String
-  documento       String?                       
+  documento       String?
   email           String?
   telefone        String?
   ativo           Boolean  @default(true)
-  tipoPessoa      String?                       
-  perfis          String[]                      
-  observacoes     String?  @db.Text             
-  dataCriacaoCA   DateTime?                     
-  dataAlteracaoCA DateTime?                     
-  createdAt       DateTime @default(now())      
-  updatedAt       DateTime @updatedAt           
-  
-  contratoId         String?   @unique 
-  contratoStatus     String?   
-  contratoNumero     Int?      
+  tipoPessoa      String?
+  perfis          String[]
+  observacoes     String?  @db.Text
+  dataCriacaoCA   DateTime?
+  dataAlteracaoCA DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  contratoId         String?   @unique
+  contratoStatus     String?
+  contratoNumero     Int?
   contratoInicio     DateTime?
-  contratoVencimento DateTime? 
-  
+  contratoVencimento DateTime?
+
   recebimentos ContaAzulRecebimento[]
-  
+
   empresaId       Int
   empresa         Company  @relation(fields: [empresaId], references: [id])
-  
+
   @@map("conta_azul_clientes")
 }
 
 model ContaAzulRecebimento {
-  id              String   @id @default(uuid()) 
+  id              String   @id @default(uuid())
 
-  id_ca_receber   String   @unique              
-  status          String                        
-  total           Float                         
-  Venda_CA        String                        
-  data_vencimento DateTime                      
-  Venda_Status    String                        
-  Venda_A_Receber Float                         
-  Venda_Pago      Float                         
-  Venda_dtCriacao DateTime                      
-  Venda_DtUpdate  DateTime                      
+  id_ca_receber   String   @unique
+  status          String
+  total           Float
+  Venda_CA        String
+  data_vencimento DateTime
+  Venda_Status    String
+  Venda_A_Receber Float
+  Venda_Pago      Float
+  Venda_dtCriacao DateTime
+  Venda_DtUpdate  DateTime
 
-  client_id       String                        
-  client_nome     String                        
+  client_id       String
+  client_nome     String
 
   cliente         ContaAzulCliente @relation(fields: [client_id], references: [caId])
 
@@ -210,4 +139,87 @@ model ContaAzulRecebimento {
   updatedAt       DateTime @updatedAt
 
   @@map("conta_azul_recebimentos")
+}
+
+
+model PdvIntegration {
+  id           Int      @id @default(autoincrement())
+  username     String
+  password     String
+  clientId     String
+  clientSecret String
+  accessToken  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("pdv_integrations")
+}
+
+model PdvLicencaGrupo {
+  id           Int      @id @default(autoincrement())
+  codGrupo     Int      @unique
+  nome         String
+  documento    String?
+  ativo        Boolean
+  produto      String?
+  qtdLojasAtivas    Int
+  qtdLojasDesativadas Int
+  dataCadastroApi   DateTime?
+
+  filiais           PdvLicencaFilial[]
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("pdv_licenca_grupos")
+}
+
+// Armazena as filiais dentro de cada grupo
+model PdvLicencaFilial {
+  id           Int      @id @default(autoincrement())
+  sistema      String?  @default("PDVLEGAL")
+  codGrupo     Int
+  codFilial    Int      @unique
+  nome         String
+  documento    String?
+  ativo        Boolean
+  matriz       Boolean
+  email        String?
+  dataCadastroApi  DateTime?
+
+  grupoId          Int
+  grupo            PdvLicencaGrupo @relation(fields: [grupoId], references: [id], onDelete: Cascade)
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("pdv_licenca_filiais")
+}
+
+
+model Company {
+  id        Int     @id @default(autoincrement())
+  cnpj      String  @unique
+  name      String  // Razão Social
+  tradeName String? // Nome Fantasia
+  email     String?
+
+  // Endereço
+  cep          String?
+  street       String?
+  number       String?
+  complement   String?
+  neighborhood String?
+  city         String?
+  state        String?
+  country      String?
+
+  contaAzul      IntegracaoContaAzul?
+  clientesCA     ContaAzulCliente[]
+  recebimentosCA ContaAzulRecebimento[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("companies")
 }

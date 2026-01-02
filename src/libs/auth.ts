@@ -68,7 +68,8 @@ export const authOptions: NextAuthOptions = {
 
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID as string,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+      allowDangerousEmailAccountLinking: true
     })
 
     // ** ...add more providers here
@@ -99,28 +100,20 @@ export const authOptions: NextAuthOptions = {
 
   // ** Please refer to https://next-auth.js.org/configuration/options#callbacks for more `callbacks` options
   callbacks: {
-    /*
-     * While using `jwt` as a strategy, `jwt()` callback will be called before
-     * the `session()` callback. So we have to add custom parameters in `token`
-     * via `jwt()` callback to make them accessible in the `session()` callback
-     */
     async jwt({ token, user }) {
+      // Esse callback roda sempre que um token é criado ou atualizado
       if (user) {
-        /*
-         * For adding custom parameters to user in session, we first need to add those parameters
-         * in token which then will be available in the `session()` callback
-         */
+        token.role = user.role // Passa o cargo do banco para o token
         token.name = user.name
       }
-
       return token
     },
     async session({ session, token }) {
+      // Esse callback roda quando o frontend pede os dados da sessão
       if (session.user) {
-        // ** Add custom params to user in session which are added in `jwt()` callback via `token` parameter
+        session.user.role = token.role // Passa o cargo do token para a sessão
         session.user.name = token.name
       }
-
       return session
     }
   }

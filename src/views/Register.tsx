@@ -5,7 +5,10 @@ import { useState } from 'react'
 
 // Next Imports
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation' // Adicionei useRouter
+
+// NextAuth Imports
+import { signIn } from 'next-auth/react' // <--- Importante para o Google
 
 // MUI Imports
 import useMediaQuery from '@mui/material/useMediaQuery'
@@ -17,6 +20,7 @@ import Checkbox from '@mui/material/Checkbox'
 import Button from '@mui/material/Button'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import Divider from '@mui/material/Divider'
+import Alert from '@mui/material/Alert' // <--- Para mostrar erros
 
 // Third-party Imports
 import classnames from 'classnames'
@@ -63,31 +67,60 @@ const MaskImg = styled('img')({
 const Register = ({ mode }: { mode: SystemMode }) => {
   // States
   const [isPasswordShown, setIsPasswordShown] = useState(false)
-
-  // Vars
-  const darkImg = '/images/pages/auth-mask-dark.png'
-  const lightImg = '/images/pages/auth-mask-light.png'
-  const darkIllustration = '/images/illustrations/auth/v2-register-dark.png'
-  const lightIllustration = '/images/illustrations/auth/v2-register-light.png'
-  const borderedDarkIllustration = '/images/illustrations/auth/v2-register-dark-border.png'
-  const borderedLightIllustration = '/images/illustrations/auth/v2-register-light-border.png'
+  const [formData, setFormData] = useState({ username: '', email: '', password: '' })
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   // Hooks
+  const router = useRouter()
   const { lang: locale } = useParams()
   const { settings } = useSettings()
   const theme = useTheme()
   const hidden = useMediaQuery(theme.breakpoints.down('md'))
-  const authBackground = useImageVariant(mode, lightImg, darkImg)
+  const authBackground = useImageVariant(mode, '/images/pages/auth-mask-light.png', '/images/pages/auth-mask-dark.png')
 
   const characterIllustration = useImageVariant(
     mode,
-    lightIllustration,
-    darkIllustration,
-    borderedLightIllustration,
-    borderedDarkIllustration
+    '/images/illustrations/auth/v2-register-light.png',
+    '/images/illustrations/auth/v2-register-dark.png',
+    '/images/illustrations/auth/v2-register-light-border.png',
+    '/images/illustrations/auth/v2-register-dark-border.png'
   )
 
   const handleClickShowPassword = () => setIsPasswordShown(show => !show)
+
+  // Captura os dados digitados
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value })
+  }
+
+  // Envia para a API
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+
+    try {
+      const res = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.message || 'Erro ao registrar')
+      }
+
+      // Sucesso! Redireciona para o login
+      router.push(getLocalizedUrl('/login', locale as Locale))
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className='flex bs-full justify-center'>
@@ -111,17 +144,39 @@ const Register = ({ mode }: { mode: SystemMode }) => {
         </Link>
         <div className='flex flex-col gap-6 is-full sm:is-auto md:is-full sm:max-is-[400px] md:max-is-[unset] mbs-8 sm:mbs-11 md:mbs-0'>
           <div className='flex flex-col gap-1'>
-            <Typography variant='h4'>Adventure starts here 🚀</Typography>
-            <Typography>Make your app management easy and fun!</Typography>
+            <Typography variant='h4'>Aventura começa aqui 🚀</Typography>
+            <Typography>Gerencie seu app de forma fácil e divertida!</Typography>
           </div>
-          <form noValidate autoComplete='off' onSubmit={e => e.preventDefault()} className='flex flex-col gap-6'>
-            <CustomTextField autoFocus fullWidth label='Username' placeholder='Enter your username' />
-            <CustomTextField fullWidth label='Email' placeholder='Enter your email' />
+
+          {/* Exibe Erro se houver */}
+          {error && <Alert severity='error'>{error}</Alert>}
+
+          <form noValidate autoComplete='off' onSubmit={handleSubmit} className='flex flex-col gap-6'>
+            <CustomTextField
+              autoFocus
+              fullWidth
+              label='Username'
+              name='username'
+              placeholder='Seu nome'
+              value={formData.username}
+              onChange={handleChange}
+            />
+            <CustomTextField
+              fullWidth
+              label='Email'
+              name='email'
+              placeholder='seu@email.com'
+              value={formData.email}
+              onChange={handleChange}
+            />
             <CustomTextField
               fullWidth
               label='Password'
+              name='password'
               placeholder='············'
               type={isPasswordShown ? 'text' : 'password'}
+              value={formData.password}
+              onChange={handleChange}
               slotProps={{
                 input: {
                   endAdornment: (
@@ -138,23 +193,26 @@ const Register = ({ mode }: { mode: SystemMode }) => {
               control={<Checkbox />}
               label={
                 <>
-                  <span>I agree to </span>
+                  <span>Eu concordo com </span>
                   <Link className='text-primary' href='/' onClick={e => e.preventDefault()}>
-                    privacy policy & terms
+                    políticas e termos
                   </Link>
                 </>
               }
             />
-            <Button fullWidth variant='contained' type='submit'>
-              Sign Up
+            <Button fullWidth variant='contained' type='submit' disabled={loading}>
+              {loading ? 'Criando conta...' : 'Cadastrar'}
             </Button>
+
             <div className='flex justify-center items-center flex-wrap gap-2'>
-              <Typography>Already have an account?</Typography>
+              <Typography>Já tem uma conta?</Typography>
               <Typography component={Link} href={getLocalizedUrl('/login', locale as Locale)} color='primary.main'>
-                Sign in instead
+                Faça Login
               </Typography>
             </div>
-            <Divider className='gap-2'>or</Divider>
+
+            <Divider className='gap-2'>ou</Divider>
+
             <div className='flex justify-center items-center gap-1.5'>
               <IconButton className='text-facebook' size='small'>
                 <i className='tabler-brand-facebook-filled' />
@@ -165,7 +223,9 @@ const Register = ({ mode }: { mode: SystemMode }) => {
               <IconButton className='text-textPrimary' size='small'>
                 <i className='tabler-brand-github-filled' />
               </IconButton>
-              <IconButton className='text-error' size='small'>
+
+              {/* --- BOTÃO DO GOOGLE CONFIGURADO --- */}
+              <IconButton className='text-error' size='small' onClick={() => signIn('google', { callbackUrl: '/' })}>
                 <i className='tabler-brand-google-filled' />
               </IconButton>
             </div>
