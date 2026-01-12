@@ -1,16 +1,15 @@
 'use client'
 
 // React Imports
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 // Next Imports
-import { useParams, useRouter, useSearchParams } from 'next/navigation' // Added useSearchParams
+import { useParams, useRouter } from 'next/navigation'
 
 // NextAuth Imports
-import { useSession } from 'next-auth/react'
+import { useSession, signOut } from 'next-auth/react'
 
 // MUI Imports
-// ... (imports de UI mantidos)
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import Typography from '@mui/material/Typography'
@@ -21,6 +20,8 @@ import Alert from '@mui/material/Alert'
 import { OTPInput } from 'input-otp'
 import type { SlotProps } from 'input-otp'
 import classnames from 'classnames'
+
+// Component Imports
 import Link from '@components/Link'
 import Logo from '@components/layout/shared/Logo'
 import { getLocalizedUrl } from '@/utils/i18n'
@@ -28,7 +29,7 @@ import AuthIllustrationWrapper from './AuthIllustrationWrapper'
 import styles from '@/libs/styles/inputOtp.module.css'
 import type { Locale } from '@configs/i18n'
 
-// ... (Slot e FakeCaret components mantidos iguais) ...
+// Styled Components
 const Slot = (props: SlotProps) => {
   return (
     <div className={classnames(styles.slot, { [styles.slotActive]: props.isActive })}>
@@ -48,47 +49,82 @@ const TwoStepsV1 = () => {
   const router = useRouter()
   const { data: session, update } = useSession()
 
-  // Detecta se estamos no modo de LOGIN PENDENTE
+  // Detecta estados
   const isLoginVerification = session?.user?.isTwoFactorPending
+  const method = session?.user?.twoFactorMethod || 'APP' // 'APP' ou 'EMAIL'
 
   const [otp, setOtp] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [feedback, setFeedback] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+  const [feedback, setFeedback] = useState<{ open: boolean; message: string; severity: 'success' | 'error' | 'info' }>({
     open: false,
     message: '',
     severity: 'success'
   })
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!otp || otp.length < 6) return
+  // Ref para evitar envio duplo do email no StrictMode do React
+  const emailSent = useRef(false)
+
+  // --- 1. DISPARO AUTOMÁTICO DE EMAIL ---
+  useEffect(() => {
+    // Só dispara se:
+    // 1. Estiver no modo de login pendente
+    // 2. O método for EMAIL
+    // 3. Ainda não tiver enviado
+    if (isLoginVerification && method === 'EMAIL' && !emailSent.current) {
+      emailSent.current = true
+      sendEmailCode()
+    }
+  }, [isLoginVerification, method])
+
+  const sendEmailCode = async () => {
+    setFeedback({ open: true, message: 'Enviando código por e-mail...', severity: 'info' })
+    try {
+      const res = await fetch('/api/auth/2fa/email/send', { method: 'POST' })
+      if (res.ok) {
+        setFeedback({ open: true, message: 'Código enviado para seu e-mail!', severity: 'success' })
+      } else {
+        setFeedback({ open: true, message: 'Erro ao enviar e-mail. Tente reenviar.', severity: 'error' })
+      }
+    } catch (error) {
+      console.error(error)
+    }
+  }
+
+  // --- FUNÇÃO DE ENVIO DE VERIFICAÇÃO ---
+  const submitCode = async (code: string) => {
+    if (loading) return
     setLoading(true)
 
     try {
-      // Define qual API chamar e qual ação tomar baseado no modo
       const apiUrl = isLoginVerification
-        ? '/api/auth/2fa/login-check' // API nova para verificar login
-        : '/api/auth/2fa/disable' // API antiga para desativar
+        ? '/api/auth/2fa/login-check' // Agora essa API suporta EMAIL também
+        : '/api/auth/2fa/disable'
 
       const res = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: otp })
+        body: JSON.stringify({ token: code })
       })
 
       const data = await res.json()
 
+      if (res.status === 429) {
+        setFeedback({
+          open: true,
+          message: data.message || 'Muitas tentativas. Aguarde 10 minutos.',
+          severity: 'error'
+        })
+        setLoading(false)
+        return
+      }
+
       if (res.ok) {
-        // SUCESSO!
         if (isLoginVerification) {
-          // MODO LOGIN: Avisa o NextAuth que o 2FA foi verificado
-          // Isso chama o callback JWT e remove a flag 'isTwoFactorPending'
           await update({ isTwoFactorVerified: true })
-          setFeedback({ open: true, message: 'Login verificado! Redirecionando...', severity: 'success' })
+          setFeedback({ open: true, message: 'Login verificado!', severity: 'success' })
           router.refresh()
-          setTimeout(() => router.replace(getLocalizedUrl('/', locale as Locale)), 500) // Vai para home
+          setTimeout(() => router.replace(getLocalizedUrl('/', locale as Locale)), 500)
         } else {
-          // MODO DESATIVAR (Código anterior)
           await update({ twoFactorEnabled: false })
           setFeedback({ open: true, message: '2FA Desativado.', severity: 'success' })
           router.refresh()
@@ -96,19 +132,47 @@ const TwoStepsV1 = () => {
         }
       } else {
         setFeedback({ open: true, message: data.message || 'Código inválido.', severity: 'error' })
+        setLoading(false)
       }
     } catch (error) {
       setFeedback({ open: true, message: 'Erro de conexão.', severity: 'error' })
-    } finally {
       setLoading(false)
     }
   }
 
-  // Textos dinâmicos baseados no modo
+  // Auto-submit
+  useEffect(() => {
+    if (otp && otp.length === 6) {
+      submitCode(otp)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [otp])
+
+  const handleManualSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (otp && otp.length === 6) {
+      submitCode(otp)
+    }
+  }
+
+  const handleSwitchAccount = async () => {
+    await signOut({ callbackUrl: getLocalizedUrl('/login', locale as Locale) })
+  }
+
+  // Textos dinâmicos baseados no Método
   const title = isLoginVerification ? 'Verificação em duas etapas 🔒' : 'Desativar Verificação ⚠️'
-  const description = isLoginVerification
-    ? 'Insira o código de 6 dígitos do seu aplicativo autenticador para concluir o login.'
-    : 'Para sua segurança, confirme o código do seu autenticador para desativar a proteção.'
+
+  let description = 'Insira o código de 6 dígitos.'
+  if (isLoginVerification) {
+    if (method === 'EMAIL') {
+      description = `Enviamos um código para o seu e-mail (${session?.user?.email}).`
+    } else {
+      description = 'Insira o código do seu aplicativo autenticador.'
+    }
+  } else {
+    description = 'Para sua segurança, confirme o código para desativar.'
+  }
+
   const buttonText = isLoginVerification ? 'Verificar e Entrar' : 'Confirmar Desativação'
   const buttonColor = isLoginVerification ? 'primary' : 'error'
 
@@ -120,7 +184,7 @@ const TwoStepsV1 = () => {
         onClose={() => setFeedback(prev => ({ ...prev, open: false }))}
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
-        <Alert severity={feedback.severity} variant='filled'>
+        <Alert severity={feedback.severity as any} variant='filled'>
           {feedback.message}
         </Alert>
       </Snackbar>
@@ -135,7 +199,7 @@ const TwoStepsV1 = () => {
             <Typography>{description}</Typography>
           </div>
 
-          <form noValidate autoComplete='off' onSubmit={handleSubmit} className='flex flex-col gap-6'>
+          <form noValidate autoComplete='off' onSubmit={handleManualSubmit} className='flex flex-col gap-6'>
             <div className='flex flex-col gap-2'>
               <OTPInput
                 onChange={setOtp}
@@ -151,6 +215,20 @@ const TwoStepsV1 = () => {
                 )}
               />
             </div>
+
+            {/* Link de Reenvio para Email */}
+            {isLoginVerification && method === 'EMAIL' && (
+              <div className='flex justify-end'>
+                <Typography
+                  variant='caption'
+                  className='cursor-pointer text-primary hover:underline'
+                  onClick={sendEmailCode}
+                >
+                  Não recebeu? Reenviar código
+                </Typography>
+              </div>
+            )}
+
             <Button
               fullWidth
               variant='contained'
@@ -161,7 +239,6 @@ const TwoStepsV1 = () => {
               {loading ? <CircularProgress size={24} color='inherit' /> : buttonText}
             </Button>
 
-            {/* Link de Voltar/Cancelar dinâmico */}
             {!isLoginVerification && (
               <div className='flex justify-center items-center flex-wrap gap-2'>
                 <Typography
@@ -173,11 +250,22 @@ const TwoStepsV1 = () => {
                 </Typography>
               </div>
             )}
+
             {isLoginVerification && (
-              <div className='flex justify-center items-center flex-wrap gap-2'>
-                <Typography color='text.secondary' className='text-sm'>
+              <div className='flex flex-col items-center gap-4'>
+                <Typography color='text.secondary' className='text-sm text-center'>
                   Não consegue acessar? Tente seus códigos de backup.
                 </Typography>
+
+                <Button
+                  variant='text'
+                  color='secondary'
+                  size='small'
+                  onClick={handleSwitchAccount}
+                  startIcon={<i className='tabler-logout' />}
+                >
+                  Entrar com outra conta
+                </Button>
               </div>
             )}
           </form>

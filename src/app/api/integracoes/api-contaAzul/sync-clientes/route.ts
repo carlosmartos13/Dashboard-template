@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
+import prisma from '@/libs/db'
 import { getValidToken } from '@/views/empresas/settings/integracaoes/contaAzul/contaAzulAuthHelper'
-
-const prisma = new PrismaClient()
 
 // Aumentei o tempo limite para 5 minutos, pois agora o script vai rodar mais devagar
 export const maxDuration = 300

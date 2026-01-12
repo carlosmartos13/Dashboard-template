@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import prisma from '@/libs/db'
 
 // Base URL da API (Ajuste se necessário, baseando-se na URL do token anterior)
-const BASE_URL = 'https://api.tabletcloud.com.br' 
+const BASE_URL = 'https://api.tabletcloud.com.br'
 
 export async function POST(request: Request) {
   try {
@@ -19,23 +17,26 @@ export async function POST(request: Request) {
     const config = await prisma.pdvIntegration.findFirst()
 
     if (!config || !config.accessToken) {
-      return NextResponse.json({ 
-        message: 'Token de acesso não encontrado. Vá em Configurações e conecte a API primeiro.' 
-      }, { status: 401 })
+      return NextResponse.json(
+        {
+          message: 'Token de acesso não encontrado. Vá em Configurações e conecte a API primeiro.'
+        },
+        { status: 401 }
+      )
     }
 
     // 3. Garante que o endpoint comece com /
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`
-    
+
     // 4. Faz a requisição para a API Externa usando o Token do banco
     console.log(`[Proxy] Chamando: ${BASE_URL}${cleanEndpoint}`)
-    
+
     const apiResponse = await fetch(`${BASE_URL}${cleanEndpoint}`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${config.accessToken}`,
+        Authorization: `Bearer ${config.accessToken}`,
         'Content-Type': 'application/json',
-        'Accept': 'application/json'
+        Accept: 'application/json'
       }
     })
 
@@ -49,16 +50,21 @@ export async function POST(request: Request) {
     }
 
     // Retorna o resultado para o frontend (mesmo que seja erro da API externa)
-    return NextResponse.json({
-      status: apiResponse.status,
-      data: data
-    }, { status: 200 })
-
+    return NextResponse.json(
+      {
+        status: apiResponse.status,
+        data: data
+      },
+      { status: 200 }
+    )
   } catch (error: any) {
     console.error('Erro no Proxy API:', error)
-    return NextResponse.json({ 
-      message: 'Erro interno no servidor Next.js', 
-      details: error.message 
-    }, { status: 500 })
+    return NextResponse.json(
+      {
+        message: 'Erro interno no servidor Next.js',
+        details: error.message
+      },
+      { status: 500 }
+    )
   }
 }

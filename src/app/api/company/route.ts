@@ -1,12 +1,10 @@
 import { NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import prisma from '@/libs/db'
 
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    
+
     // Validação básica
     if (!body.cnpj || !body.name) {
       return NextResponse.json({ message: 'CNPJ e Razão Social são obrigatórios' }, { status: 400 })
@@ -21,7 +19,6 @@ export async function POST(request: Request) {
     })
 
     return NextResponse.json({ success: true, data: company }, { status: 201 })
-
   } catch (error) {
     console.error(error)
     return NextResponse.json({ message: 'Erro ao salvar empresa' }, { status: 500 })
@@ -39,7 +36,6 @@ export async function GET() {
     }
 
     return NextResponse.json(company, { status: 200 })
-
   } catch (error) {
     console.error('Erro ao buscar empresa:', error)
     return NextResponse.json({ message: 'Erro interno.' }, { status: 500 })

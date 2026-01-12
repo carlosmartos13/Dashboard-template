@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { PrismaClient } from '@prisma/client'
+import prisma from '@/libs/db'
 import speakeasy from 'speakeasy'
 import qrcode from 'qrcode'
 import { authOptions } from '@/libs/auth'
-
-const prisma = new PrismaClient()
 
 export async function GET(req: Request) {
   try {

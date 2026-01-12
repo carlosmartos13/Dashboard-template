@@ -6,7 +6,8 @@ declare module 'next-auth' {
     user: {
       id: string
       twoFactorEnabled: boolean
-      isTwoFactorPending?: boolean // <--- NOVO: Indica se falta digitar o código
+      isTwoFactorPending?: boolean
+      twoFactorMethods?: string[] // <--- MUDOU DE string PARA string[]
       role?: string
     } & DefaultSession['user']
   }
@@ -14,8 +15,13 @@ declare module 'next-auth' {
   interface User {
     id: string
     twoFactorEnabled: boolean
-    isTwoFactorPending?: boolean // <--- NOVO
+    isTwoFactorPending?: boolean
+    twoFactorMethods?: string[] // <--- MUDOU
     role?: string
+
+    // Mapeando os campos do banco para o objeto User interno se necessário
+    twoFactorAppEnabled?: boolean
+    twoFactorEmailEnabled?: boolean
   }
 }
 
@@ -23,7 +29,8 @@ declare module 'next-auth/jwt' {
   interface JWT {
     id: string
     twoFactorEnabled: boolean
-    isTwoFactorPending?: boolean // <--- NOVO
+    isTwoFactorPending?: boolean
+    twoFactorMethods?: string[] // <--- MUDOU
     role?: string
   }
 }

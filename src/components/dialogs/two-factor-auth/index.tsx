@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react'
 import type { ChangeEvent } from 'react'
 
 // Next Imports
-import { useRouter } from 'next/navigation' // <--- 1. Importar useRouter
+import { useRouter } from 'next/navigation'
 
 // NextAuth Imports
 import { useSession } from 'next-auth/react'
@@ -24,11 +24,32 @@ import CircularProgress from '@mui/material/CircularProgress'
 import Snackbar from '@mui/material/Snackbar'
 import Box from '@mui/material/Box'
 
+// Input OTP Imports (Para a melhor UX)
+import { OTPInput } from 'input-otp'
+import type { SlotProps } from 'input-otp'
+import classnames from 'classnames'
+import styles from '@/libs/styles/inputOtp.module.css' // Certifique-se que este CSS existe (o mesmo do login)
+
 // Component Imports
 import CustomTextField from '@core/components/mui/TextField'
 import CustomInputHorizontal from '@core/components/custom-inputs/Horizontal'
 import DialogCloseButton from '../DialogCloseButton'
 import type { CustomInputHorizontalData } from '@core/components/custom-inputs/types'
+
+// --- COMPONENTES VISUAIS DO OTP (SLOTS) ---
+const Slot = (props: SlotProps) => {
+  return (
+    <div className={classnames(styles.slot, { [styles.slotActive]: props.isActive })}>
+      {props.char !== null && <div>{props.char}</div>}
+      {props.hasFakeCaret && <FakeCaret />}
+    </div>
+  )
+}
+const FakeCaret = () => (
+  <div className={styles.fakeCaret}>
+    <div className='w-px h-5 bg-textPrimary' />
+  </div>
+)
 
 type TwoFactorAuthProps = {
   open: boolean
@@ -63,32 +84,160 @@ const data: CustomInputHorizontalData[] = [
   }
 ]
 
-// --- 1. COMPONENTE E-MAIL ---
-const EMAILDialog = (handleAuthDialogClose: () => void) => {
+// --- 1. COMPONENTE E-MAIL (REFEITO E OTIMIZADO) ---
+type EmailDialogProps = {
+  handleClose: () => void
+  userEmail: string | undefined | null
+  onSuccess: (backupCodes: string[]) => void
+}
+
+const EmailDialog = ({ handleClose, userEmail, onSuccess }: EmailDialogProps) => {
+  // Estados do Fluxo
+  const [step, setStep] = useState<'send' | 'verify'>('send')
+  const [loading, setLoading] = useState(false)
+  const [otp, setOtp] = useState('')
+  const [feedback, setFeedback] = useState<{ message: string; severity: 'error' | 'success' | null }>({
+    message: '',
+    severity: null
+  })
+
+  // 1. Enviar Código por Email
+  const handleSendCode = async () => {
+    setLoading(true)
+    setFeedback({ message: '', severity: null })
+    try {
+      const res = await fetch('/api/auth/2fa/email/send', { method: 'POST' })
+      const data = await res.json()
+
+      if (res.status === 429) {
+        setFeedback({ message: 'Muitos envios. Aguarde 60 segundos.', severity: 'error' })
+      } else if (res.ok) {
+        setStep('verify') // Avança para a tela de digitar
+        setFeedback({ message: 'Código enviado! Verifique sua caixa de entrada.', severity: 'success' })
+      } else {
+        setFeedback({ message: data.message || 'Erro ao enviar email.', severity: 'error' })
+      }
+    } catch (error) {
+      setFeedback({ message: 'Erro de conexão.', severity: 'error' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // 2. Verificar Código (Auto-submit chama isso)
+  const handleVerifyCode = async (codeToCheck: string) => {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/auth/2fa/email/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: codeToCheck })
+      })
+      const data = await res.json()
+
+      if (res.status === 429) {
+        setFeedback({ message: 'Muitas tentativas erradas. Aguarde 10 minutos.', severity: 'error' })
+      } else if (res.ok) {
+        // SUCESSO!
+        onSuccess(data.backupCodes || [])
+      } else {
+        setFeedback({ message: data.message || 'Código inválido.', severity: 'error' })
+        setOtp('') // Limpa para tentar de novo
+      }
+    } catch (error) {
+      setFeedback({ message: 'Erro ao verificar.', severity: 'error' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Efeito: Auto-submit
+  useEffect(() => {
+    if (otp.length === 6) {
+      handleVerifyCode(otp)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [otp])
+
   return (
     <>
-      <DialogTitle variant='h5' className='flex flex-col gap-2 sm:pbs-16 sm:pbe-6 sm:pli-16'>
-        Verify Your Mobile Number for E-MAIL
-        <Typography component='span' className='flex flex-col'>
-          Enter your mobile phone number with country code and we will send you a verification code.
-        </Typography>
+      <DialogTitle variant='h4' className='text-center sm:pbs-16 sm:pbe-6 sm:pli-16'>
+        Verificação por E-mail
       </DialogTitle>
-      <DialogContent className='overflow-visible pbs-0 sm:pbe-16 sm:pli-16'>
-        <CustomTextField fullWidth type='number' label='Mobile Number' placeholder='123 456 7890' />
+
+      <DialogContent className='flex flex-col gap-6 pbs-0 sm:pli-16'>
+        {feedback.message && (
+          <Alert severity={feedback.severity as any} className='mb-4'>
+            {feedback.message}
+          </Alert>
+        )}
+
+        {step === 'send' ? (
+          <div className='text-center flex flex-col gap-4'>
+            <Typography>
+              Enviaremos um código de verificação para: <br />
+              <strong>{userEmail}</strong>
+            </Typography>
+            <div className='flex justify-center'>
+              <i className='tabler-mail-forward text-[64px] text-primary' />
+            </div>
+          </div>
+        ) : (
+          <div className='flex flex-col gap-4 items-center'>
+            <Typography>Digite o código de 6 dígitos enviado para seu e-mail.</Typography>
+
+            {/* OTP Input igual ao do Login */}
+            <OTPInput
+              onChange={setOtp}
+              value={otp}
+              maxLength={6}
+              disabled={loading}
+              containerClassName='flex items-center gap-2'
+              render={({ slots }) => (
+                <div className='flex items-center justify-between w-full gap-4'>
+                  {slots.map((slot, idx) => (
+                    <Slot key={idx} {...slot} />
+                  ))}
+                </div>
+              )}
+            />
+            <Typography variant='caption' className='text-textDisabled'>
+              Não recebeu?{' '}
+              <span className='text-primary cursor-pointer hover:underline' onClick={handleSendCode}>
+                Reenviar
+              </span>
+            </Typography>
+          </div>
+        )}
       </DialogContent>
+
       <DialogActions className='pbs-0 sm:pbe-16 sm:pli-16'>
-        <Button variant='tonal' type='reset' color='secondary' onClick={handleAuthDialogClose}>
-          Cancel
+        <Button variant='tonal' color='secondary' onClick={handleClose}>
+          Cancelar
         </Button>
-        <Button color='success' variant='contained' type='submit' onClick={handleAuthDialogClose}>
-          Submit
-        </Button>
+
+        {step === 'send' && (
+          <Button color='primary' variant='contained' onClick={handleSendCode} disabled={loading}>
+            {loading ? <CircularProgress size={20} /> : 'Enviar Código'}
+          </Button>
+        )}
+
+        {step === 'verify' && (
+          <Button
+            color='success'
+            variant='contained'
+            disabled={loading || otp.length < 6}
+            onClick={() => handleVerifyCode(otp)}
+          >
+            {loading ? <CircularProgress size={20} /> : 'Verificar'}
+          </Button>
+        )}
       </DialogActions>
     </>
   )
 }
 
-// --- 2. COMPONENTE APP (QR Code) ---
+// --- 2. COMPONENTE APP (QR Code) - Mantido igual mas otimizado ---
 type AppDialogProps = {
   handleClose: () => void
   qrCodeUrl: string
@@ -99,6 +248,12 @@ type AppDialogProps = {
 }
 
 const AppDialog = ({ handleClose, qrCodeUrl, token, setToken, onVerify, loading }: AppDialogProps) => {
+  // Tratamento para garantir apenas números e max 6 chars
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/\D/g, '').slice(0, 6)
+    setToken(val)
+  }
+
   return (
     <>
       <DialogTitle variant='h4' className='text-center sm:pbs-16 sm:pbe-6 sm:pli-16'>
@@ -130,7 +285,8 @@ const AppDialog = ({ handleClose, qrCodeUrl, token, setToken, onVerify, loading 
             label='Código de Autenticação'
             placeholder='123456'
             value={token}
-            onChange={e => setToken(e.target.value)}
+            onChange={handleChange}
+            disabled={loading}
           />
         </div>
       </DialogContent>
@@ -194,7 +350,6 @@ const BackupCodeDialog = ({ codes, onFinish }: BackupCodeDialogProps) => {
       </DialogContent>
 
       <DialogActions className='pbs-0 sm:pbe-16 sm:pli-16'>
-        {/* Adicionei um onClick assíncrono aqui */}
         <Button variant='contained' color='primary' onClick={onFinish} fullWidth>
           Entendi, finalizei o backup
         </Button>
@@ -205,8 +360,8 @@ const BackupCodeDialog = ({ codes, onFinish }: BackupCodeDialogProps) => {
 
 // --- 4. COMPONENTE PRINCIPAL ---
 const TwoFactorAuth = ({ open, setOpen }: TwoFactorAuthProps) => {
-  const { update } = useSession()
-  const router = useRouter() // <--- 2. Instanciar useRouter
+  const { data: session, update } = useSession()
+  const router = useRouter()
 
   // Estados
   const initialSelectedOption = data.filter(item => item.isSelected)[data.filter(item => item.isSelected).length - 1]
@@ -214,11 +369,12 @@ const TwoFactorAuth = ({ open, setOpen }: TwoFactorAuthProps) => {
   const [authType, setAuthType] = useState<string>(initialSelectedOption)
   const [showAuthDialog, setShowAuthDialog] = useState<boolean>(false)
 
-  // Estados Lógicos
+  // Estados Lógicos (APP)
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('')
   const [token, setToken] = useState<string>('')
   const [loading, setLoading] = useState(false)
 
+  // Estado Comum (Backup Codes)
   const [backupCodes, setBackupCodes] = useState<string[]>([])
 
   const [feedback, setFeedback] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
@@ -227,6 +383,7 @@ const TwoFactorAuth = ({ open, setOpen }: TwoFactorAuthProps) => {
     severity: 'success'
   })
 
+  // Efeito para buscar QR Code (SÓ SE FOR APP)
   useEffect(() => {
     if (showAuthDialog && authType === 'app' && backupCodes.length === 0) {
       const fetchQr = async () => {
@@ -242,29 +399,9 @@ const TwoFactorAuth = ({ open, setOpen }: TwoFactorAuthProps) => {
     }
   }, [showAuthDialog, authType, backupCodes.length])
 
-  // Handlers de Fechamento
-  const handleClose = () => {
-    setOpen(false)
-    resetState()
-  }
-
-  const handleAuthDialogClose = () => {
-    setShowAuthDialog(false)
-    resetState()
-  }
-
-  const resetState = () => {
-    setToken('')
-    setBackupCodes([])
-    if (authType !== 'app') setTimeout(() => setAuthType('app'), 250)
-  }
-
-  const handleOptionChange = (prop: string | ChangeEvent<HTMLInputElement>) => {
-    setAuthType(typeof prop === 'string' ? prop : (prop.target as HTMLInputElement).value)
-  }
-
-  // --- LÓGICA DE VERIFICAÇÃO ---
-  const handleVerify = async () => {
+  // --- LÓGICA DE VERIFICAÇÃO (APP) ---
+  const handleVerifyApp = async () => {
+    if (loading) return
     setLoading(true)
     try {
       const res = await fetch('/api/auth/2fa/verify', {
@@ -274,15 +411,18 @@ const TwoFactorAuth = ({ open, setOpen }: TwoFactorAuthProps) => {
       })
       const data = await res.json()
 
+      if (res.status === 429) {
+        setFeedback({
+          open: true,
+          message: data.message || 'Muitas tentativas. Aguarde 10 minutos.',
+          severity: 'error'
+        })
+        setLoading(false)
+        return
+      }
+
       if (res.ok) {
-        setFeedback({ open: true, message: '2FA Ativado! Salve seus códigos de backup.', severity: 'success' })
-
-        if (data.backupCodes && Array.isArray(data.backupCodes)) {
-          setBackupCodes(data.backupCodes)
-        }
-
-        // Atualização Otimista
-        await update({ twoFactorEnabled: true })
+        handleSuccess(data.backupCodes)
       } else {
         setFeedback({ open: true, message: data.message || 'Código inválido', severity: 'error' })
       }
@@ -293,16 +433,43 @@ const TwoFactorAuth = ({ open, setOpen }: TwoFactorAuthProps) => {
     }
   }
 
-  // --- 3. FINALIZAR BACKUP (AQUI ESTÁ A CORREÇÃO) ---
+  // --- SUCESSO UNIFICADO (APP e EMAIL) ---
+  const handleSuccess = async (codes: string[]) => {
+    setFeedback({ open: true, message: '2FA Ativado! Salve seus códigos de backup.', severity: 'success' })
+    if (codes && Array.isArray(codes)) {
+      setBackupCodes(codes)
+    }
+    await update({ twoFactorEnabled: true })
+  }
+
+  // Auto-submit para APP
+  useEffect(() => {
+    if (token.length === 6 && showAuthDialog && authType === 'app') {
+      handleVerifyApp()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token])
+
+  // Handlers de UI
+  const handleClose = () => {
+    setOpen(false)
+    resetState()
+  }
+  const handleAuthDialogClose = () => {
+    setShowAuthDialog(false)
+    resetState()
+  }
+  const resetState = () => {
+    setToken('')
+    setBackupCodes([])
+    if (authType !== 'app') setTimeout(() => setAuthType('app'), 250)
+  }
+  const handleOptionChange = (prop: string | ChangeEvent<HTMLInputElement>) => {
+    setAuthType(typeof prop === 'string' ? prop : (prop.target as HTMLInputElement).value)
+  }
   const handleFinishBackup = async () => {
-    // Força o NextAuth a buscar a sessão mais recente no servidor
-    // Isso garante que o status 'twoFactorEnabled: true' seja baixado
     await update()
-
-    // Força o Next.js a atualizar os componentes da página
     router.refresh()
-
-    // Fecha os modais
     setOpen(false)
     setShowAuthDialog(false)
     resetState()
@@ -321,6 +488,7 @@ const TwoFactorAuth = ({ open, setOpen }: TwoFactorAuthProps) => {
         </Alert>
       </Snackbar>
 
+      {/* DIALOG 1: SELEÇÃO DE MÉTODO */}
       <Dialog
         fullWidth
         maxWidth='md'
@@ -367,6 +535,7 @@ const TwoFactorAuth = ({ open, setOpen }: TwoFactorAuthProps) => {
         </DialogActions>
       </Dialog>
 
+      {/* DIALOG 2: CONFIGURAÇÃO / BACKUP */}
       <Dialog
         fullWidth
         maxWidth='md'
@@ -383,14 +552,19 @@ const TwoFactorAuth = ({ open, setOpen }: TwoFactorAuthProps) => {
           {backupCodes.length > 0 ? (
             <BackupCodeDialog codes={backupCodes} onFinish={handleFinishBackup} />
           ) : authType === 'E-MAIL' ? (
-            EMAILDialog(handleAuthDialogClose)
+            // COMPONENTE NOVO DE EMAIL
+            <EmailDialog
+              handleClose={handleAuthDialogClose}
+              userEmail={session?.user?.email}
+              onSuccess={handleSuccess}
+            />
           ) : (
             <AppDialog
               handleClose={handleAuthDialogClose}
               qrCodeUrl={qrCodeUrl}
               token={token}
               setToken={setToken}
-              onVerify={handleVerify}
+              onVerify={handleVerifyApp}
               loading={loading}
             />
           )}

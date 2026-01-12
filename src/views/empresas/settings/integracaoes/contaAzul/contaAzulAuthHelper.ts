@@ -1,6 +1,4 @@
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import prisma from '@/libs/db'
 
 // Adicionamos o parâmetro opcional 'forceRefresh'
 export async function getValidToken(empresaId: number, forceRefresh: boolean = false) {

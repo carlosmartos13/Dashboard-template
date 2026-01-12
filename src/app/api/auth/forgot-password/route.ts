@@ -1,11 +1,9 @@
 // src/app/api/auth/forgot-password/route.ts
 import { NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
+import prisma from '@/libs/db'
 import crypto from 'crypto'
 import { sendEmail } from '@/libs/email'
 import { getResetPasswordHtml } from '@/libs/email-reset'
-
-const prisma = new PrismaClient()
 
 export async function POST(req: Request) {
   try {

@@ -18,13 +18,12 @@ import Button from '@mui/material/Button'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import Divider from '@mui/material/Divider'
 import Alert from '@mui/material/Alert'
-import AlertTitle from '@mui/material/AlertTitle' // Opcional, mas ajuda visualmente, vou usar Typography se não puder importar
 
 // Third-party Imports
 import { signIn } from 'next-auth/react'
 import { Controller, useForm } from 'react-hook-form'
 import { valibotResolver } from '@hookform/resolvers/valibot'
-import { email, object, minLength, string, pipe, nonEmpty } from 'valibot'
+import { email, object, minLength, string, pipe, nonEmpty, optional } from 'valibot'
 import type { SubmitHandler } from 'react-hook-form'
 import type { InferInput } from 'valibot'
 import classnames from 'classnames'
@@ -75,26 +74,29 @@ type ErrorType = {
   message: string[]
 }
 
-type FormData = InferInput<typeof schema>
-
+// --- 1. ATUALIZAÇÃO DO SCHEMA (Aceita twoFactorCode opcional) ---
 const schema = object({
   email: pipe(string(), minLength(1, 'This field is required'), email('Email is invalid')),
   password: pipe(
     string(),
     nonEmpty('This field is required'),
     minLength(5, 'Password must be at least 5 characters long')
-  )
+  ),
+  twoFactorCode: optional(string()) // <--- Novo campo
 })
+
+type FormData = InferInput<typeof schema>
 
 const Login = ({ mode }: { mode: SystemMode }) => {
   // States
   const [isPasswordShown, setIsPasswordShown] = useState(false)
   const [errorState, setErrorState] = useState<ErrorType | null>(null)
-
-  // --- NOVO: Contador de tentativas falhas ---
   const [failedAttempts, setFailedAttempts] = useState(0)
 
-  // Vars
+  // --- 2. NOVO ESTADO PARA CONTROLAR A TELA DE 2FA ---
+  const [showTwoFactor, setShowTwoFactor] = useState(false)
+
+  // Vars e Hooks (sem alterações)
   const darkImg = '/images/pages/auth-mask-dark.png'
   const lightImg = '/images/pages/auth-mask-light.png'
   const darkIllustration = '/images/illustrations/auth/v2-login-dark.png'
@@ -102,7 +104,6 @@ const Login = ({ mode }: { mode: SystemMode }) => {
   const borderedDarkIllustration = '/images/illustrations/auth/v2-login-dark-border.png'
   const borderedLightIllustration = '/images/illustrations/auth/v2-login-light-border.png'
 
-  // Hooks
   const router = useRouter()
   const searchParams = useSearchParams()
   const { lang: locale } = useParams()
@@ -119,7 +120,8 @@ const Login = ({ mode }: { mode: SystemMode }) => {
     resolver: valibotResolver(schema),
     defaultValues: {
       email: '',
-      password: ''
+      password: '',
+      twoFactorCode: '' // Valor inicial vazio
     }
   })
 
@@ -134,42 +136,45 @@ const Login = ({ mode }: { mode: SystemMode }) => {
   const handleClickShowPassword = () => setIsPasswordShown(show => !show)
 
   const onSubmit: SubmitHandler<FormData> = async (data: FormData) => {
-    // Reseta erro ao tentar enviar
     setErrorState(null)
 
+    // Tenta logar (enviando código se ele existir no form)
     const res = await signIn('credentials', {
       email: data.email,
       password: data.password,
+      twoFactorCode: data.twoFactorCode, // <--- Enviamos o código aqui
       redirect: false
     })
 
     if (res && res.ok && !res.error) {
-      // Sucesso: Limpa tentativas
       setFailedAttempts(0)
       const redirectURL = searchParams.get('redirectTo') ?? '/'
       router.replace(getLocalizedUrl(redirectURL, locale as Locale))
     } else {
-      // --- LÓGICA DE ERRO AJUSTADA ---
+      // --- 3. LÓGICA MÁGICA DO 2FA ---
       if (res?.error) {
-        // Incrementa tentativas
+        // A. Se o erro for "2fa_required", mudamos a tela!
+        if (res.error === '2fa_required' || res.error.includes('2fa_required')) {
+          setShowTwoFactor(true)
+          setFailedAttempts(0) // Reseta tentativas pois a senha estava certa
+          return // Para aqui e espera o usuário digitar o código
+        }
+
+        // B. Erros normais (Senha errada, etc)
         const attempts = failedAttempts + 1
         setFailedAttempts(attempts)
 
         let errorMessage = 'Ocorreu um erro inesperado.'
-
         try {
-          // Tenta parsear JSON da sua API
           const parsed = JSON.parse(res.error)
           errorMessage = parsed.message || JSON.stringify(parsed)
         } catch (e) {
-          // Se falhar (erro "Unexpected token C"), é string do NextAuth
           if (res.error === 'CredentialsSignin') {
-            errorMessage = 'E-mail ou senha incorretos. Verifique suas credenciais.'
+            errorMessage = 'Credenciais inválidas.'
           } else {
             errorMessage = res.error
           }
         }
-
         setErrorState({ message: [errorMessage] })
       }
     }
@@ -193,24 +198,22 @@ const Login = ({ mode }: { mode: SystemMode }) => {
           <Logo />
         </div>
         <div className='flex flex-col gap-6 is-full sm:is-auto md:is-full sm:max-is-[400px] md:max-is-[unset] mbs-8 sm:mbs-11 md:mbs-0'>
+          {/* TÍTULOS DINÂMICOS */}
           <div className='flex flex-col gap-1'>
-            <Typography variant='h4'>{`Welcome to ${themeConfig.templateName}! 👋🏻`}</Typography>
-            <Typography>Please sign-in to your account and start the adventure</Typography>
+            <Typography variant='h4'>
+              {showTwoFactor ? 'Verificação em Duas Etapas 🔐' : `Bem-vindo ao ${themeConfig.templateName}! 👋🏻`}
+            </Typography>
+            <Typography>
+              {showTwoFactor
+                ? 'Enviamos um código de verificação para o seu e-mail. Digite-o abaixo.'
+                : 'Faça login na sua conta para começar a aventura'}
+            </Typography>
           </div>
 
-          {/* Alerta Padrão (Mantido conforme solicitado) */}
-          {/* <Alert icon={false} className='bg-[var(--mui-palette-primary-lightOpacity)]'>
-            <Typography variant='body2' color='primary.main'>
-              Email: <span className='font-medium'>admin@vuexy.com</span> / Pass:{' '}
-              <span className='font-medium'>admin</span>
-            </Typography>
-          </Alert> */}
-
-          {/* --- NOVO: ALERTA DE ERRO DE LOGIN --- */}
+          {/* MENSAGEM DE ERRO */}
           {errorState && (
             <Alert severity='error'>
               {errorState.message[0]}
-              {/* Oferta de Reset na 3ª tentativa */}
               {failedAttempts >= 3 && (
                 <div className='mt-1'>
                   <Typography variant='caption' className='block'>
@@ -227,103 +230,158 @@ const Login = ({ mode }: { mode: SystemMode }) => {
             </Alert>
           )}
 
-          <form
-            noValidate
-            autoComplete='off'
-            action={() => {}}
-            onSubmit={handleSubmit(onSubmit)}
-            className='flex flex-col gap-6'
-          >
-            <Controller
-              name='email'
-              control={control}
-              rules={{ required: true }}
-              render={({ field }) => (
-                <CustomTextField
-                  {...field}
-                  autoFocus
-                  fullWidth
-                  type='email'
-                  label='Email'
-                  placeholder='Enter your email'
-                  onChange={e => {
-                    // --- NOVO: Transforma em minúsculo automaticamente ---
-                    const val = e.target.value.toLowerCase()
-                    field.onChange(val)
-                    errorState !== null && setErrorState(null)
-                  }}
-                  {...((errors.email || errorState !== null) && {
-                    error: true,
-                    helperText: errors?.email?.message || errorState?.message[0]
-                  })}
+          <form noValidate autoComplete='off' onSubmit={handleSubmit(onSubmit)} className='flex flex-col gap-6'>
+            {/* --- CAMPOS NORMAIS (Escondidos se for 2FA) --- */}
+            {!showTwoFactor && (
+              <>
+                <Controller
+                  name='email'
+                  control={control}
+                  rules={{ required: true }}
+                  render={({ field }) => (
+                    <CustomTextField
+                      {...field}
+                      autoFocus
+                      fullWidth
+                      type='email'
+                      label='Email'
+                      placeholder='admin@vuexy.com'
+                      onChange={e => {
+                        const val = e.target.value.toLowerCase()
+                        field.onChange(val)
+                        errorState !== null && setErrorState(null)
+                      }}
+                      {...((errors.email || errorState !== null) && {
+                        error: true,
+                        helperText: errors?.email?.message || errorState?.message[0]
+                      })}
+                    />
+                  )}
                 />
-              )}
-            />
-            <Controller
-              name='password'
-              control={control}
-              rules={{ required: true }}
-              render={({ field }) => (
-                <CustomTextField
-                  {...field}
-                  fullWidth
-                  label='Password'
-                  placeholder='············'
-                  id='login-password'
-                  type={isPasswordShown ? 'text' : 'password'}
-                  onChange={e => {
-                    field.onChange(e.target.value)
-                    errorState !== null && setErrorState(null)
-                  }}
-                  slotProps={{
-                    input: {
-                      endAdornment: (
-                        <InputAdornment position='end'>
-                          <IconButton
-                            edge='end'
-                            onClick={handleClickShowPassword}
-                            onMouseDown={e => e.preventDefault()}
-                          >
-                            <i className={isPasswordShown ? 'tabler-eye' : 'tabler-eye-off'} />
-                          </IconButton>
-                        </InputAdornment>
-                      )
-                    }
-                  }}
-                  {...(errors.password && { error: true, helperText: errors.password.message })}
+                <Controller
+                  name='password'
+                  control={control}
+                  rules={{ required: true }}
+                  render={({ field }) => (
+                    <CustomTextField
+                      {...field}
+                      fullWidth
+                      label='Password'
+                      placeholder='············'
+                      type={isPasswordShown ? 'text' : 'password'}
+                      onChange={e => {
+                        field.onChange(e.target.value)
+                        errorState !== null && setErrorState(null)
+                      }}
+                      slotProps={{
+                        input: {
+                          endAdornment: (
+                            <InputAdornment position='end'>
+                              <IconButton
+                                edge='end'
+                                onClick={handleClickShowPassword}
+                                onMouseDown={e => e.preventDefault()}
+                              >
+                                <i className={isPasswordShown ? 'tabler-eye' : 'tabler-eye-off'} />
+                              </IconButton>
+                            </InputAdornment>
+                          )
+                        }
+                      }}
+                      {...(errors.password && { error: true, helperText: errors.password.message })}
+                    />
+                  )}
                 />
-              )}
-            />
-            <div className='flex justify-between items-center gap-x-3 gap-y-1 flex-wrap'>
-              <FormControlLabel control={<Checkbox defaultChecked />} label='Remember me' />
-              <Typography
-                className='text-end'
-                color='primary.main'
-                component={Link}
-                href={getLocalizedUrl('/forgot-password', locale as Locale)}
-              >
-                Forgot password?
-              </Typography>
-            </div>
+                <div className='flex justify-between items-center gap-x-3 gap-y-1 flex-wrap'>
+                  <FormControlLabel control={<Checkbox defaultChecked />} label='Lembrar-me' />
+                  <Typography
+                    className='text-end'
+                    color='primary.main'
+                    component={Link}
+                    href={getLocalizedUrl('/forgot-password', locale as Locale)}
+                  >
+                    Esqueceu a senha?
+                  </Typography>
+                </div>
+              </>
+            )}
+
+            {/* --- CAMPO DE CÓDIGO 2FA (Aparece só quando necessário) --- */}
+            {showTwoFactor && (
+              <div className='flex flex-col gap-4'>
+                <Controller
+                  name='twoFactorCode'
+                  control={control}
+                  rules={{ required: showTwoFactor }} // Só obrigatório se estiver visível
+                  render={({ field }) => (
+                    <CustomTextField
+                      {...field}
+                      autoFocus
+                      fullWidth
+                      label='Código de Verificação'
+                      placeholder='123456'
+                      type='text'
+                      inputProps={{
+                        maxLength: 6,
+                        style: { textAlign: 'center', letterSpacing: '0.5em', fontSize: '1.2em' }
+                      }}
+                      onChange={e => {
+                        // Permite apenas números
+                        const val = e.target.value.replace(/\D/g, '')
+                        field.onChange(val)
+                      }}
+                    />
+                  )}
+                />
+                <Typography variant='caption' className='text-center'>
+                  Verifique seu terminal ou e-mail para pegar o código.
+                </Typography>
+              </div>
+            )}
+
             <Button fullWidth variant='contained' type='submit'>
-              Login
+              {showTwoFactor ? 'Verificar Código' : 'Login'}
             </Button>
-            <div className='flex justify-center items-center flex-wrap gap-2'>
-              <Typography>New on our platform?</Typography>
-              <Typography component={Link} href={getLocalizedUrl('/register', locale as Locale)} color='primary.main'>
-                Create an account
-              </Typography>
-            </div>
-            <Divider className='gap-2'>or</Divider>
-            <Button
-              color='secondary'
-              className='self-center text-textPrimary'
-              startIcon={<img src='/images/logos/google.png' alt='Google' width={22} />}
-              sx={{ '& .MuiButton-startIcon': { marginInlineEnd: 3 } }}
-              onClick={() => signIn('google')}
-            >
-              Sign in with Google
-            </Button>
+
+            {/* Botão de Voltar (se estiver no 2FA e quiser corrigir o email) */}
+            {showTwoFactor && (
+              <Button
+                fullWidth
+                variant='text'
+                color='secondary'
+                onClick={() => {
+                  setShowTwoFactor(false)
+                  setErrorState(null)
+                }}
+              >
+                Cancelar
+              </Button>
+            )}
+
+            {!showTwoFactor && (
+              <>
+                <div className='flex justify-center items-center flex-wrap gap-2'>
+                  <Typography>Novo na plataforma?</Typography>
+                  <Typography
+                    component={Link}
+                    href={getLocalizedUrl('/register', locale as Locale)}
+                    color='primary.main'
+                  >
+                    Criar conta
+                  </Typography>
+                </div>
+                <Divider className='gap-2'>ou</Divider>
+                <Button
+                  color='secondary'
+                  className='self-center text-textPrimary'
+                  startIcon={<img src='/images/logos/google.png' alt='Google' width={22} />}
+                  sx={{ '& .MuiButton-startIcon': { marginInlineEnd: 3 } }}
+                  onClick={() => signIn('google')}
+                >
+                  Entrar com Google
+                </Button>
+              </>
+            )}
           </form>
         </div>
       </div>

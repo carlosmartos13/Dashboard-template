@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server'
 
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import prisma from '@/libs/db'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,25 +19,27 @@ export async function GET(request: Request) {
     // Buscamos apenas se existe um token salvo para essa empresa
     const config = await prisma.integracaoContaAzul.findUnique({
       where: { empresaId },
-      select: { accessToken: true } 
+      select: { accessToken: true }
     })
 
     // Se tiver accessToken, consideramos conectado
     const isConnected = !!config?.accessToken
 
-    return NextResponse.json({ 
-      isConnected,
+    return NextResponse.json({
+      isConnected
 
       // Não retornamos chaves sensíveis
     })
-
   } catch (error: any) {
-    console.error("❌ Erro GET Status:", error)
-    
+    console.error('❌ Erro GET Status:', error)
+
     // MELHORIA: Retorna a mensagem técnica do erro (ex: falha de conexão com banco)
     // Isso permite que o Toast do frontend mostre o motivo real
-    return NextResponse.json({ 
-        error: error.message || 'Erro desconhecido ao verificar status da conexão.' 
-    }, { status: 500 })
+    return NextResponse.json(
+      {
+        error: error.message || 'Erro desconhecido ao verificar status da conexão.'
+      },
+      { status: 500 }
+    )
   }
 }

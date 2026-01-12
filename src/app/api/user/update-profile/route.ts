@@ -1,10 +1,8 @@
 // src/app/api/user/update-profile/route.ts
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { PrismaClient } from '@prisma/client'
+import prisma from '@/libs/db'
 import { authOptions } from '@/libs/auth'
-
-const prisma = new PrismaClient()
 
 // --- FUNÇÃO DE LEITURA (GET) ---
 // Usada quando a página carrega para buscar a foto HD e o nome atualizado

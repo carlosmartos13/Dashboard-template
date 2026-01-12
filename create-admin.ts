@@ -1,8 +1,6 @@
 // create-admin.ts
-import { PrismaClient } from '@prisma/client'
+import prisma from '@/libs/db'
 import bcrypt from 'bcryptjs'
-
-const prisma = new PrismaClient()
 
 async function main() {
   const email = 'suporte@seatec.com.br' // Seu email de login

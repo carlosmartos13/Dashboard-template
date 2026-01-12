@@ -17,9 +17,9 @@ const Security = () => {
         <TwoFactorAuthenticationCard />
       </Grid>
 
-      <Grid size={{ xs: 12 }}>
+      {/* <Grid size={{ xs: 12 }}>
         <RecentDevicesTable />
-      </Grid>
+      </Grid> */}
     </Grid>
   )
 }

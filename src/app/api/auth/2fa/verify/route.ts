@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { PrismaClient } from '@prisma/client'
+import prisma from '@/libs/db'
 import speakeasy from 'speakeasy'
-import crypto from 'crypto' // <--- Import nativo do Node.js
+import crypto from 'crypto'
 import { authOptions } from '@/libs/auth'
-
-const prisma = new PrismaClient()
 
 export async function POST(req: Request) {
   try {
@@ -13,6 +11,9 @@ export async function POST(req: Request) {
     if (!session?.user?.email) return NextResponse.json({ message: 'Não autorizado' }, { status: 401 })
 
     const { token } = await req.json()
+
+    // Remove espaços em branco caso venha "123 456"
+    const cleanToken = token.replace(/\s/g, '')
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email }
@@ -25,23 +26,39 @@ export async function POST(req: Request) {
     const verified = speakeasy.totp.verify({
       secret: user.twoFactorSecret,
       encoding: 'base32',
-      token: token
+      token: cleanToken,
+      window: 2 // Importante: Aceita pequena diferença de relógio (+/- 60s)
     })
 
     if (verified) {
-      // --- NOVO: GERAR BACKUP CODES ---
-      // Gera 10 códigos de 8 caracteres hexadecimais
-      const backupCodes = Array.from({ length: 10 }, () => crypto.randomBytes(4).toString('hex').toUpperCase())
+      // --- GERAR OU MANTER BACKUP CODES ---
+      // Se o usuário já tiver códigos (ex: ativou por Email antes), nós mantemos os mesmos.
+      // Se não tiver, geramos novos.
+      let backupCodes: string[] = []
 
-      // Salva no banco (separados por vírgula).
-      // Em produção real, o ideal seria hashear isso com bcrypt antes de salvar, igual senha.
-      const backupCodesString = backupCodes.join(',')
+      if (user.twoFactorBackupCodes) {
+        try {
+          // Tenta ler os códigos existentes do banco
+          backupCodes = JSON.parse(user.twoFactorBackupCodes)
+        } catch (e) {
+          // Se der erro (formato antigo), ignora e gera novos abaixo
+          backupCodes = []
+        }
+      }
 
+      // Se a lista estiver vazia, gera 10 novos códigos
+      if (backupCodes.length === 0) {
+        backupCodes = Array.from({ length: 10 }, () => crypto.randomBytes(4).toString('hex').toUpperCase())
+      }
+
+      // Salva no banco com a nova estrutura
       await prisma.user.update({
         where: { email: session.user.email },
         data: {
-          twoFactorEnabled: true,
-          twoFactorBackupCodes: backupCodesString
+          twoFactorEnabled: true, // Master Switch ON
+          twoFactorAppEnabled: true, // <--- CORREÇÃO: Ativa flag específica do App
+          twoFactorBackupCodes: JSON.stringify(backupCodes) // Salva como JSON string
+          // twoFactorMethod: REMOVIDO
         }
       })
 
@@ -54,6 +71,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: 'Código inválido.' }, { status: 400 })
     }
   } catch (error) {
+    console.error(error)
     return NextResponse.json({ message: 'Erro interno' }, { status: 500 })
   }
 }

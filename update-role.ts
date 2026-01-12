@@ -1,7 +1,5 @@
 // update-role.ts
-import { PrismaClient, Role } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import prisma from '@/libs/db'
 
 async function main() {
   const email = 'suporte@seatec.com.br' // Seu email

@@ -1,72 +1,61 @@
 import { NextResponse } from 'next/server'
-import { PrismaClient, Prisma } from '@prisma/client' // Adicionei 'Prisma' aqui para tipagem se precisar
+import Prisma from '@prisma/client'
+import prisma from '@/libs/db'
 
-const prisma = new PrismaClient()
-
-export const dynamic = 'force-dynamic' 
+export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '10') 
-    const search = searchParams.get('search') // 1. LER O PARÂMETRO
-    
+    const limit = parseInt(searchParams.get('limit') || '10')
+    const search = searchParams.get('search')
+
     const skip = (page - 1) * limit
 
     console.log(`--- API GET: Buscando Matrizes (Pág ${page} | Busca: "${search || ''}") ---`)
 
-    // 2. CONSTRUÇÃO DO FILTRO (WHERE)
-    // Começamos com a regra base: TEM que ser matriz
-   // ... (início da função GET)
-   
-   
-    
-    // ...
-
+    // 1. CONSTRUÇÃO DO FILTRO (WHERE)
+    // Definimos explicitamente o tipo para o TypeScript aceitar a manipulação dinâmica
     const whereClause: Prisma.PdvLicencaFilialWhereInput = {
       matriz: true
     }
 
     if (search) {
-      // 1. Remove pontuação para buscar no banco (Ex: "62.871" vira "62871")
-      const searchClean = search.replace(/\D/g, '')
-
-      // 2. Verifica se é um número
+      // Limpeza de dados
+      const searchClean = search.replace(/\D/g, '') // Remove tudo que não é número
       const isNumeric = !isNaN(Number(searchClean)) && searchClean.length > 0
-      
-      // 3. PROTEÇÃO CRÍTICA: 
-      // Só buscamos nas colunas Int (codFilial/codGrupo) se o número tiver menos de 10 dígitos.
-      // Se tiver mais (ex: CNPJ com 14), estoura o limite do Int e quebra a query.
+
+      // PROTEÇÃO DE INTEIROS (Postgres Integer Limit ~2.1bi)
+      // Se o número tiver 10 dígitos ou mais (ex: CPF/CNPJ), não podemos buscar em campos Int (codFilial/codGrupo)
+      // ou a query vai quebrar com erro de "Integer Overflow".
       const isSmallNumber = isNumeric && searchClean.length < 10
 
-      // 4. Define o termo para buscar no Documento
-      // Se conseguiu limpar (é CNPJ/CPF), usa o limpo. Se é texto ("abc"), usa o original.
+      // Termo para busca em texto (Documento)
+      // Se limpou e sobrou algo (ex: CNPJ), usa o limpo. Se é nome ("Posto"), usa o original.
       const docTerm = searchClean.length > 0 ? searchClean : search
 
-      whereClause.AND = [
-        {
-          OR: [
-            // Busca por Nome (Texto)
-            { nome: { contains: search, mode: 'insensitive' } },
-
-            // Busca por Documento (Texto String)
-            // Aqui ele vai achar "62871119000197" no banco
-            { documento: { contains: docTerm } },
-
-            // Busca por IDs (Inteiros) - SÓ SE FOR NÚMERO PEQUENO
-            ...(isSmallNumber ? [{ codFilial: Number(searchClean) }] : []),
-            ...(isSmallNumber ? [{ codGrupo: Number(searchClean) }] : []),
-          ]
-        }
+      // Montagem dinâmica das condições OR
+      const orConditions: Prisma.PdvLicencaFilialWhereInput[] = [
+        // Busca por Nome (Texto)
+        { nome: { contains: search, mode: 'insensitive' } },
+        // Busca por Documento (Texto String)
+        { documento: { contains: docTerm } }
       ]
-    }
-    
-    // ... (restante do código: prisma.findMany)
 
-    // 3. BUSCA NO BANCO COM O FILTRO
+      // Só adiciona busca por ID numérico se for seguro
+      if (isSmallNumber) {
+        orConditions.push({ codFilial: Number(searchClean) })
+        orConditions.push({ codGrupo: Number(searchClean) })
+      }
+
+      // Adiciona o bloco OR dentro do AND do filtro principal
+      whereClause.AND = [{ OR: orConditions }]
+    }
+
+    // 2. BUSCA NO BANCO
     const matrizes = await prisma.pdvLicencaFilial.findMany({
-      where: whereClause, // <--- Usamos o filtro dinâmico aqui
+      where: whereClause,
       skip: skip,
       take: limit,
       include: {
@@ -74,7 +63,7 @@ export async function GET(request: Request) {
           include: {
             filiais: {
               where: {
-                matriz: false 
+                matriz: false
               },
               orderBy: {
                 codFilial: 'asc'
@@ -88,11 +77,9 @@ export async function GET(request: Request) {
       }
     })
 
-    // 4. CONTAGEM TOTAL (CORRIGIDO)
-    // IMPORTANTE: O count também precisa receber o 'whereClause'
-    // Se não, ele vai contar 1000 registros, mas sua busca só retornou 2, bugando a paginação.
+    // 3. CONTAGEM TOTAL (Usando o mesmo where para a paginação bater)
     const total = await prisma.pdvLicencaFilial.count({
-      where: whereClause 
+      where: whereClause
     })
 
     return NextResponse.json({
@@ -100,12 +87,11 @@ export async function GET(request: Request) {
       meta: {
         total,
         page,
-        last_page: Math.ceil(total / limit) || 1 // Evita divisão por zero/NaN
+        last_page: Math.ceil(total / limit) || 1
       }
     })
-
   } catch (error: any) {
-    console.error("ERRO API:", error)
-    return NextResponse.json({ message: 'Erro ao buscar licenças' }, { status: 500 })
+    console.error('ERRO API:', error)
+    return NextResponse.json({ message: 'Erro ao buscar licenças', error: error.message }, { status: 500 })
   }
 }

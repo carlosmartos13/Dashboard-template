@@ -49,5 +49,6 @@
     "customizer",
     "iconify",
     "tanstack"
-  ]
+  ],
+  "search.useParentIgnoreFiles": true
 }

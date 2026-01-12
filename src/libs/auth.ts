@@ -2,11 +2,14 @@
 import CredentialProvider from 'next-auth/providers/credentials'
 import GoogleProvider from 'next-auth/providers/google'
 import { PrismaAdapter } from '@auth/prisma-adapter'
-import { PrismaClient } from '@prisma/client'
+import prisma from '@/libs/db'
+import { compare } from 'bcryptjs'
 import type { NextAuthOptions } from 'next-auth'
 import type { Adapter } from 'next-auth/adapters'
 
-const prisma = new PrismaClient()
+// --- 1. NOVOS IMPORTS AQUI ---
+import { generateTwoFactorToken } from '@/libs/mail-tokens'
+import { sendTwoFactorTokenEmail } from '@/libs/email'
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as Adapter,
@@ -17,46 +20,96 @@ export const authOptions: NextAuthOptions = {
       type: 'credentials',
       credentials: {},
       async authorize(credentials) {
-        const { email, password } = credentials as { email: string; password: string }
+        // --- 2. ADICIONEI twoFactorCode AQUI ---
+        const { email, password, twoFactorCode } = credentials as {
+          email: string
+          password: string
+          twoFactorCode?: string // Pode vir ou não
+        }
 
         try {
-          // ** Login API Call
-          const res = await fetch(`${process.env.API_URL}/login`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ email, password })
+          // ---------------------------------------------------------
+          // 1. BUSCA O USUÁRIO
+          // ---------------------------------------------------------
+          const user = await prisma.user.findUnique({
+            where: { email: email }
           })
 
-          const data = await res.json()
-
-          if (res.status === 401) {
-            throw new Error(JSON.stringify(data))
+          if (!user) {
+            console.log('❌ Usuário não encontrado:', email)
+            return null
           }
 
-          if (res.status === 200) {
-            // Busca status do 2FA no banco local
-            const localUser = await prisma.user.findUnique({
-              where: { email: email },
-              select: { twoFactorEnabled: true }
-            })
+          // ---------------------------------------------------------
+          // 2. VALIDA A SENHA
+          // ---------------------------------------------------------
+          if (!user.password) {
+            console.log('❌ Usuário sem senha (provavelmente OAuth)')
+            return null
+          }
 
-            const is2faEnabled = localUser?.twoFactorEnabled || false
+          const isPasswordValid = await compare(password, user.password)
 
-            // --- A CORREÇÃO ESTÁ AQUI ---
-            // Você precisa RETORNAR o objeto mesclado
-            return {
-              ...data, // Dados da API externa (id, name, email, token)
-              twoFactorEnabled: is2faEnabled,
-              // Se 2FA estiver ativado, marcamos como pendente para o Middleware interceptar
-              isTwoFactorPending: is2faEnabled
+          if (!isPasswordValid) {
+            console.log('❌ Senha incorreta para:', email)
+            return null
+          }
+
+          // ---------------------------------------------------------
+          // 3. LÓGICA DE 2FA (ATUALIZADA)
+          // ---------------------------------------------------------
+          const is2faEnabled = user.twoFactorEnabled || false
+
+          // Se 2FA estiver ativo, precisamos tratar
+          if (is2faEnabled) {
+            // CENÁRIO A: É a primeira tentativa (usuário digitou senha, mas não o código)
+            if (!twoFactorCode) {
+              console.log('🔒 2FA Ativo. Gerando token...')
+
+              // A.1 Gera o token no banco
+              if (!user.email) {
+                throw new Error('Email is required for 2FA')
+              }
+              const tokenGerado = await generateTwoFactorToken(user.email)
+
+              // A.2 Envia o email (e mostra no console do VS Code)
+              await sendTwoFactorTokenEmail(tokenGerado.email, tokenGerado.token)
+
+              // A.3 INTERROMPE O LOGIN!
+              // Lança um erro específico que o Frontend vai capturar para mostrar o campo de código
+              throw new Error('2fa_required')
             }
-            // -----------------------------
+
+            // CENÁRIO B: Usuário já enviou o código (Validaremos isso logo mais)
+            console.log('📝 Código 2FA recebido para validação:', twoFactorCode)
+
+            // ... (Aqui entrará a validação do token no próximo passo) ...
           }
 
-          return null
+          // --- FIM DA LÓGICA 2FA ---
+
+          const methods: string[] = []
+          if (is2faEnabled) {
+            if (user.twoFactorAppEnabled) methods.push('APP')
+            if (user.twoFactorEmailEnabled) methods.push('EMAIL')
+          }
+          if (is2faEnabled && methods.length === 0) methods.push('APP')
+
+          console.log('✅ Login Autorizado!')
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            image: user.image,
+            role: user.role,
+            twoFactorEnabled: is2faEnabled,
+            isTwoFactorPending: is2faEnabled,
+            twoFactorMethods: methods
+          }
         } catch (e: any) {
+          // Log importante para debug
+          console.log('Status do Authorize:', e.message)
           throw new Error(e.message)
         }
       }
@@ -79,26 +132,48 @@ export const authOptions: NextAuthOptions = {
   },
 
   callbacks: {
-    async jwt({ token, user, trigger, session }) {
-      // 1. Login inicial
+    async jwt({ token, user, account, trigger, session }) {
       if (user) {
         token.id = user.id
-        token.twoFactorEnabled = user.twoFactorEnabled
-        token.isTwoFactorPending = user.isTwoFactorPending
+        if (account?.provider === 'google') {
+          if (user.email) {
+            const dbUser = await prisma.user.findUnique({
+              where: { email: user.email },
+              select: {
+                twoFactorEnabled: true,
+                twoFactorAppEnabled: true,
+                twoFactorEmailEnabled: true
+              }
+            })
+            const isEnabled = dbUser?.twoFactorEnabled || false
+            const methods: string[] = []
+            if (isEnabled) {
+              if (dbUser?.twoFactorAppEnabled) methods.push('APP')
+              if (dbUser?.twoFactorEmailEnabled) methods.push('EMAIL')
+            }
+            if (isEnabled && methods.length === 0) methods.push('APP')
+
+            token.twoFactorEnabled = isEnabled
+            token.isTwoFactorPending = isEnabled
+            token.twoFactorMethods = methods
+          }
+        } else {
+          token.twoFactorEnabled = user.twoFactorEnabled
+          token.isTwoFactorPending = user.isTwoFactorPending
+          token.twoFactorMethods = user.twoFactorMethods
+        }
       }
 
-      // 2. Atualização manual
       if (trigger === 'update' && session) {
         token = { ...token, ...session.user }
-
-        // Se o frontend avisar que verificou o 2FA, removemos a pendência
         if (session.isTwoFactorVerified === true) {
           token.isTwoFactorPending = false
         }
-
-        // Garante atualização do status do 2FA se vier na sessão
         if (typeof session.twoFactorEnabled === 'boolean') {
           token.twoFactorEnabled = session.twoFactorEnabled
+        }
+        if (session.twoFactorMethods) {
+          token.twoFactorMethods = session.twoFactorMethods
         }
       }
       return token
@@ -109,6 +184,7 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id as string
         session.user.twoFactorEnabled = token.twoFactorEnabled as boolean
         session.user.isTwoFactorPending = token.isTwoFactorPending as boolean
+        session.user.twoFactorMethods = (token.twoFactorMethods as string[]) || []
       }
       return session
     }

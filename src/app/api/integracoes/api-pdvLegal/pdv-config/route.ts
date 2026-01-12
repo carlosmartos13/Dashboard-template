@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import prisma from '@/libs/db'
 
 // POST: Salva ou Atualiza (Código que já existia, mantive igual)
 export async function POST(request: Request) {
@@ -39,7 +37,7 @@ export async function POST(request: Request) {
 export async function GET() {
   try {
     const config = await prisma.pdvIntegration.findFirst()
-    
+
     if (!config) {
       return NextResponse.json({ empty: true }, { status: 200 })
     }

@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
+import prisma from '@/libs/db'
 import { getValidToken } from '@/views/empresas/settings/integracaoes/contaAzul/contaAzulAuthHelper'
 
-const prisma = new PrismaClient()
 export const maxDuration = 300
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
