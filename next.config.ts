@@ -2,7 +2,7 @@ import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
   basePath: process.env.BASEPATH,
-
+  output: 'standalone',
   // --- ADICIONE ESTA LINHA ---
   // Isso diz ao Next.js: "Não tente empacotar o Prisma ou o driver PG,
   // deixe-os rodar como arquivos nativos do Node.js".
