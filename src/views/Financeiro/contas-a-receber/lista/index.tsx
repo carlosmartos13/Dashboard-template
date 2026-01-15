@@ -8,26 +8,35 @@ import VendasRelatorioTable from './tabela'
 import VendasCardsResumo from './VendasCardsResumo'
 import VendasFilterCard from './VendasFilterCard'
 
-const Financeirolista = () => {
-  // Removemos useSession e useRouter.
-  // Agora a proteção é feita pelo Middleware antes de chegar aqui.
+// 1. Definimos o que esse componente espera receber.
+// Se você souber o tipo exato (UsersType), troque o 'any' por ele.
+interface FinanceiroListaProps {
+  userData: any
+}
 
+// 2. Adicionamos a prop na função do componente
+const Financeirolista = ({ userData }: FinanceiroListaProps) => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
+
+  // DICA: Provavelmente o ID da empresa vem dentro de userData.
+  // Algo como: const idEmpresa = userData?.empresaId || 1;
+  // Por enquanto mantive o 1 para não quebrar, mas é aqui que você arruma os dados errados.
+  const idEmpresa = 1
 
   return (
     <Grid container spacing={6}>
       <Grid size={{ xs: 12, md: 6 }}>
-        {/* Ajustei para 'item xs={12}' pois 'size' é do Grid v2,
-            mas se seu MUI for v6+ pode manter size */}
-        <VendasCardsResumo empresaId={1} selectedDate={selectedDate} />
+        {/* Aqui passamos a variável, e não o número fixo */}
+        <VendasCardsResumo empresaId={idEmpresa} selectedDate={selectedDate} />
       </Grid>
 
       <Grid size={{ xs: 12, md: 6 }}>
         <VendasFilterCard date={selectedDate} setDate={setSelectedDate} />
       </Grid>
 
-      <Grid size={{ xs: 12, md: 12 }}>
-        <VendasRelatorioTable empresaId={1} selectedDate={selectedDate} />
+      <Grid size={{ xs: 12 }}>
+        {/* Aqui também */}
+        <VendasRelatorioTable empresaId={idEmpresa} selectedDate={selectedDate} />
       </Grid>
     </Grid>
   )

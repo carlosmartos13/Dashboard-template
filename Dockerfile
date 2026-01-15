@@ -1,56 +1,63 @@
-# --- Estágio 1: Instalação das dependências (Base) ---
-FROM node:25 AS base
+# --- Estágio 1: Base ---
+FROM node:25-alpine AS base
 
-# Instalar dependências necessárias para o Alpine (libc6-compat)
+# Instalar dependências de sistema necessárias
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Copiar apenas os arquivos de dependência primeiro (para aproveitar o cache do Docker)
+# --- Estágio 2: Dependências ---
+FROM base AS deps
+# Copia apenas os arquivos de configuração de pacotes
 COPY package.json package-lock.json* ./
 
-# Instalar dependências
-RUN npm ci
+# IMPORTANTE: Adicionei --ignore-scripts
+# Isso evita que o 'postinstall' rode agora (pois a pasta prisma ainda não existe aqui)
+RUN npm ci --ignore-scripts
 
-# --- Estágio 2: Construção (Builder) ---
+# --- Estágio 3: Builder (Construção) ---
 FROM base AS builder
 WORKDIR /app
-COPY --from=base /app/node_modules ./node_modules
+
+# Copia as dependências instaladas no estágio anterior
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Desabilitar telemetria do Next.js durante o build (opcional, mas recomendado)
-ENV NEXT_TELEMETRY_DISABLED 1
+# Desabilita telemetria
+ENV NEXT_TELEMETRY_DISABLED=1
 
-# Construir o projeto
+# --- CORREÇÃO AQUI ---
+# Agora que copiamos todos os arquivos (COPY . .), podemos rodar os comandos
+# que falharam anteriormente:
+RUN npx prisma generate
+RUN npm run build:icons
+
+# Constrói o projeto
 RUN npm run build
 
-# --- Estágio 3: Execução (Runner) ---
+# --- Estágio 4: Runner (Produção) ---
 FROM base AS runner
 WORKDIR /app
 
-ENV NODE_ENV production
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
-# Criar usuário e grupo para segurança (não rodar como root)
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copiar os arquivos públicos e o build otimizado do estágio anterior
 COPY --from=builder /app/public ./public
 
-# Configurar permissões para o cache de imagens do Next.js
+# Configura permissões
 RUN mkdir .next
 RUN chown nextjs:nodejs .next
 
-# Copiar a saída 'standalone' que configuramos no Passo 1
+# Copia o build otimizado
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Mudar para o usuário não-root
 USER nextjs
 
-# Expor a porta que o container vai usar
 EXPOSE 3000
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
 
-ENV PORT 3000
-# Comando para iniciar a aplicação
 CMD ["node", "server.js"]
