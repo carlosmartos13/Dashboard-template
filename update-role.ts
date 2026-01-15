@@ -1,6 +1,6 @@
 // update-role.ts
 import prisma from '@/libs/db'
-
+import { Role } from '@/generated/prisma/browser'
 async function main() {
   const email = 'suporte@seatec.com.br' // Seu email
 

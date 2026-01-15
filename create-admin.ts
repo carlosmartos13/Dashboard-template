@@ -1,30 +1,30 @@
 // create-admin.ts
-import prisma from '@/libs/db'
+import { Role } from './node_modules/@prisma/client/index.js'
+import { PrismaClient } from './node_modules/@prisma/client/index.js'
+
+// Em vez de importar o 'prisma' da sua lib, vamos instanciar um novo aqui
+// para garantir que ele use o binário local do container
+const prisma = new PrismaClient()
 import bcrypt from 'bcryptjs'
 
 async function main() {
-  const email = 'suporte@seatec.com.br' // Seu email de login
-  const senhaPlana = 'seatecsuporte' // Sua senha de login
-
-  // Gera o hash seguro
+  const email = 'suporte@seatec.com.br'
+  const senhaPlana = 'seatecsuporte'
   const passwordHash = await bcrypt.hash(senhaPlana, 10)
 
   const user = await prisma.user.upsert({
     where: { email },
-    update: {
-      password: passwordHash // Atualiza a senha se o usuário já existir
-    },
+    update: { password: passwordHash },
     create: {
       email,
       name: 'Admin Master',
       password: passwordHash,
-      image: '/images/avatars/1.png'
+      image: '/images/avatars/1.png',
+      role: Role.SUPER_ADMIN
     }
   })
 
   console.log(`✅ Usuário criado/atualizado!`)
-  console.log(`📧 Email: ${email}`)
-  console.log(`🔑 Senha: ${senhaPlana}`)
 }
 
 main()

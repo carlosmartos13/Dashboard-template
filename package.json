@@ -149,6 +149,7 @@
     }
   },
   "prisma": {
-    "schema": "./src/prisma/schema.prisma"
+    "schema": "./src/prisma/schema.prisma",
+    "config": "./prisma.config.ts"
   }
 }
