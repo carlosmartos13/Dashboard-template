@@ -3,7 +3,7 @@ services:
     build:
       context: .
       target: dev
-    container_name: dashboard-bi-dev
+    container_name: voecrm-dev
     ports:
       - '3001:3000'
       - '5555:5555'

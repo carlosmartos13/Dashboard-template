@@ -16,11 +16,11 @@ services:
 
   postgres:
     image: postgres:15-alpine
-    container_name: dashboard-bi-db-prod
+    container_name: voecrm-db-prod
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=dashboard-bi
+      - POSTGRES_DB=voecrm
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
