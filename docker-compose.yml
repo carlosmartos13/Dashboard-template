@@ -3,7 +3,7 @@ services:
     build:
       context: .
       target: prod
-    container_name: dashboard-bi-prod
+    container_name: voecrm-prod
     ports:
       - '3000:3000'
     environment:
