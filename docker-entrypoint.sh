@@ -12,6 +12,10 @@ npx prisma generate
 echo "🚀 Aplicando Migrations..."
 npx prisma migrate deploy
 
-# 3. Executa o comando original do container (ex: npm run dev ou npm start)
+# 3. Executa o seed/criação de admin (Garante que o usuário inicial exista)
+echo "🌱 Verificando usuário Admin..."
+npx ts-node create-admin.ts
+
+# 4. Executa o comando original do container (ex: npm run dev ou npm start)
 echo "🏁 Iniciando a aplicação..."
 exec "$@"

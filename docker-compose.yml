@@ -6,10 +6,8 @@ services:
     container_name: voecrm-prod
     ports:
       - '3000:3000'
-    environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-      - NEXTAUTH_URL=${NEXTAUTH_URL}
+    env_file:
+      - .env
     depends_on:
       - postgres
     restart: unless-stopped
@@ -17,10 +15,8 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: voecrm-db-prod
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=voecrm
+    env_file:
+      - .env
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:

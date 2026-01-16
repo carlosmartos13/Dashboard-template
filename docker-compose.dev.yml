@@ -9,12 +9,24 @@ services:
       - '5555:5555'
     volumes:
       - .:/app
-    environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - /app/node_modules # Evita conflito entre node_modules do host (Windows) e container (Linux)
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+    # Instala dependências antes de rodar o dev server para garantir que tudo esteja sincronizado
+    command: sh -c "pnpm install && pnpm dev"
 
-    command: pnpm dev
+  postgres:
+    image: postgres:15-alpine
+    container_name: voecrm-db-dev
+    env_file:
+      - .env
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    ports:
+      - '5432:5432'
+    restart: unless-stopped
 
 volumes:
-  node_modules_dev:
+  postgres_data_dev:

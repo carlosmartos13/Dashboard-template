@@ -11,7 +11,7 @@ dotenv.config()
 
 // Create a new pg Pool
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: process.env.DATABASE_URL
 })
 
 // Instantiate the PrismaPg adapter
@@ -33,6 +33,8 @@ export const prisma =
 import bcrypt from 'bcryptjs'
 
 async function main() {
+  console.log('🌱 Iniciando seed do banco de dados...')
+
   const email = 'suporte@seatec.com.br'
   const senhaPlana = 'seatecsuporte'
   const passwordHash = await bcrypt.hash(senhaPlana, 10)
@@ -49,7 +51,7 @@ async function main() {
     }
   })
 
-  console.log(`✅ Usuário criado/atualizado!`)
+  console.log(`✅ Usuário Admin (${email}) verificado/criado com sucesso!`)
 }
 
 main()
