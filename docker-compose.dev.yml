@@ -1,0 +1,22 @@
+services:
+  app:
+    build:
+      context: .
+      target: dev
+    container_name: dashboard-bi-dev
+    ports:
+      - '3001:3000'
+      - '5555:5555'
+    volumes:
+      - .:/app
+
+      - node_modules_dev:/app/node_modules
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
+
+    command: pnpm dev
+
+volumes:
+  node_modules_dev:
