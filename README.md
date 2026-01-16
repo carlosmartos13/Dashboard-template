@@ -1,6 +1,5 @@
-
-```markdown
-# 📊 Dashboard BI - VoePDV
+````markdown
+# 📊 Dashboard BI - VoeCRM
 
 Este projeto é um Dashboard Financeiro desenvolvido com **Next.js (Template Vuexy)**, integrado via API com a **Conta Azul** para gestão de recebimentos, utilizando **PostgreSQL** e **Prisma ORM**.
 
@@ -10,21 +9,23 @@ Este projeto é um Dashboard Financeiro desenvolvido com **Next.js (Template Vue
 
 Antes de começar, certifique-se de ter instalado em sua máquina:
 
-* **Node.js** (Versão 18 ou superior recomenda-se LTS)
-* **Git**
-* **PostgreSQL** (Versão mais recente)
-* **Ngrok** (Para tunelamento da API em desenvolvimento)
+- **Node.js** (Versão 18 ou superior recomenda-se LTS)
+- **Git**
+- **PostgreSQL** (Versão mais recente)
+- **Ngrok** (Para tunelamento da API em desenvolvimento)
 
 ---
 
 ## 🛠️ Passo a Passo de Instalação
 
 ### 1. Instalação do Banco de Dados (PostgreSQL)
+
 1.  Baixe e instale a última versão do PostgreSQL para seu sistema operacional: [Download PostgreSQL](https://www.postgresql.org/download/).
 2.  Durante a instalação, defina a senha do usuário `postgres` (ex: `root` ou outra de sua preferência).
-3.  Abra o **pgAdmin** (ou terminal) e crie um banco de dados vazio chamado `voepdv`.
+3.  Abra o **pgAdmin** (ou terminal) e crie um banco de dados vazio chamado `VoeCRM`.
 
 ### 2. Configuração do Ngrok
+
 Como a API da Conta Azul exige um callback HTTPS válido, usamos o Ngrok para expor o localhost.
 
 1.  Crie uma conta e baixe o [Ngrok](https://ngrok.com/download).
@@ -34,8 +35,8 @@ Como a API da Conta Azul exige um callback HTTPS válido, usamos o Ngrok para ex
 ```bash
 # Substitua pelo seu domínio fixo se tiver
 ngrok http --domain=supersensibly-unintromittive-beth.ngrok-free.dev 3000
-
 ```
+````
 
 > **Nota:** Mantenha o terminal do Ngrok aberto enquanto desenvolve.
 
@@ -85,7 +86,7 @@ GOOGLE_CLIENT_SECRET=
 # Database
 # -----------------------------------------------------------------------------
 # Ajuste 'postgres:senha' conforme sua instalação local
-DATABASE_URL="postgresql://postgres:root@localhost:5432/voepdv?schema=public"
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/voecrm?schema=public"
 
 # -----------------------------------------------------------------------------
 # API
@@ -120,7 +121,7 @@ npx prisma migrate dev --name init_novo_pc
 
 ```
 
-*(Opcional) Se houver dados iniciais configurados:*
+_(Opcional) Se houver dados iniciais configurados:_
 
 ```bash
 npx prisma db seed
@@ -133,7 +134,7 @@ npx prisma db seed
 
 ### Ambiente de Desenvolvimento
 
-Para iniciar o servidor local com *Hot Reload*:
+Para iniciar o servidor local com _Hot Reload_:
 
 ```bash
 npm run dev
@@ -163,9 +164,9 @@ npm start
 
 ## ⚠️ Checklist de Troubleshooting
 
-* **Erro de Conexão Conta Azul?** Verifique se o link no `NEXT_PUBLIC_SERVER_HOST` (.env) é exatamente o mesmo que está rodando no terminal do Ngrok.
-* **Erro de Banco de Dados?** Verifique se o serviço do PostgreSQL está rodando e se as credenciais na `DATABASE_URL` estão corretas.
-* **Callback Inválido?** Lembre-se de atualizar a URL de Redirecionamento no painel de desenvolvedor da Conta Azul sempre que o link do Ngrok mudar.
+- **Erro de Conexão Conta Azul?** Verifique se o link no `NEXT_PUBLIC_SERVER_HOST` (.env) é exatamente o mesmo que está rodando no terminal do Ngrok.
+- **Erro de Banco de Dados?** Verifique se o serviço do PostgreSQL está rodando e se as credenciais na `DATABASE_URL` estão corretas.
+- **Callback Inválido?** Lembre-se de atualizar a URL de Redirecionamento no painel de desenvolvedor da Conta Azul sempre que o link do Ngrok mudar.
 
 ```
 

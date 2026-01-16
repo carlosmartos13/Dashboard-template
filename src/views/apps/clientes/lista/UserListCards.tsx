@@ -29,26 +29,26 @@ type StatsState = {
 
 // --- COMPONENTE INTERNO: CARD SIMPLES (Substitui o HorizontalWithSubtitle) ---
 // Isso remove a obrigatoriedade do 'trend' e remove o sinal de (+)
-const CardEstatisticaSimples = ({ 
-  title, 
-  stats, 
-  icon, 
-  color, 
-  subtitle, 
-  loading 
-}: { 
-  title: string, 
-  stats: string, 
-  icon: string, 
-  color: 'primary' | 'error' | 'warning' | 'success' | 'info', 
-  subtitle: string,
+const CardEstatisticaSimples = ({
+  title,
+  stats,
+  icon,
+  color,
+  subtitle,
+  loading
+}: {
+  title: string
+  stats: string
+  icon: string
+  color: 'primary' | 'error' | 'warning' | 'success' | 'info'
+  subtitle: string
   loading: boolean
 }) => {
   return (
     <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
         {loading ? (
-           <Skeleton variant="rectangular" height={80} sx={{ borderRadius: 1 }} />
+          <Skeleton variant='rectangular' height={80} sx={{ borderRadius: 1 }} />
         ) : (
           <>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -110,7 +110,6 @@ const UserListCards = () => {
 
   return (
     <Grid container spacing={6} sx={{ alignItems: 'stretch' }}>
-      
       {/* --- CARD 1: ATIVOS --- */}
       <Grid size={{ xs: 12, sm: 6, md: 3 }}>
         <CardEstatisticaSimples
@@ -140,7 +139,7 @@ const UserListCards = () => {
         <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
           <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
             {loading ? (
-              <Skeleton variant="rectangular" height="100%" sx={{ borderRadius: 1 }} />
+              <Skeleton variant='rectangular' height='100%' sx={{ borderRadius: 1 }} />
             ) : (
               <>
                 {/* Cabeçalho */}
@@ -159,39 +158,54 @@ const UserListCards = () => {
                 </Box>
 
                 {/* Lista Compacta de Produtos */}
-                <Box display="flex" flexDirection="column" gap={1} sx={{ mt: 'auto' }}>
+                <Box display='flex' flexDirection='column' gap={1} sx={{ mt: 'auto' }}>
                   {stats.pdvLegalDetails.map((prod, index) => (
-                    <Box key={index} width="100%">
-                      <Box display="flex" justifyContent="space-between" alignItems="center">
-                        <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                    <Box key={index} width='100%'>
+                      <Box display='flex' justifyContent='space-between' alignItems='center'>
+                        <Typography variant='caption' sx={{ fontWeight: 600, color: 'text.primary' }}>
                           {prod.name}
                         </Typography>
-                        
-                        <Box display="flex" gap={0.5}>
+
+                        <Box display='flex' gap={0.5}>
                           {/* Ativos */}
-                          <Box display="flex" alignItems="center" gap={0.5} 
-                               sx={{ bgcolor: 'rgba(40, 199, 111, 0.1)', px: 0.8, py: 0.2, borderRadius: 1 }}>
+                          <Box
+                            display='flex'
+                            alignItems='center'
+                            gap={0.5}
+                            sx={{ bgcolor: 'rgba(40, 199, 111, 0.1)', px: 0.8, py: 0.2, borderRadius: 1 }}
+                          >
                             <Box sx={{ width: 5, height: 5, borderRadius: '50%', bgcolor: 'success.main' }} />
-                            <Typography variant="caption" color="success.main" fontWeight="bold" sx={{ fontSize: '0.7rem' }}>
+                            <Typography
+                              variant='caption'
+                              color='success.main'
+                              fontWeight='bold'
+                              sx={{ fontSize: '0.7rem' }}
+                            >
                               {prod.active}
                             </Typography>
                           </Box>
 
                           {/* Inativos */}
                           {prod.inactive > 0 && (
-                            <Box display="flex" alignItems="center" 
-                                 sx={{ bgcolor: 'rgba(234, 84, 85, 0.1)', px: 0.8, py: 0.2, borderRadius: 1 }}>
-                              <Typography variant="caption" color="error.main" fontWeight="bold" sx={{ fontSize: '0.7rem' }}>
+                            <Box
+                              display='flex'
+                              alignItems='center'
+                              sx={{ bgcolor: 'rgba(234, 84, 85, 0.1)', px: 0.8, py: 0.2, borderRadius: 1 }}
+                            >
+                              <Typography
+                                variant='caption'
+                                color='error.main'
+                                fontWeight='bold'
+                                sx={{ fontSize: '0.7rem' }}
+                              >
                                 {prod.inactive}
                               </Typography>
                             </Box>
                           )}
                         </Box>
                       </Box>
-                      
-                      {index < stats.pdvLegalDetails.length - 1 && (
-                        <Divider sx={{ borderStyle: 'dashed', mt: 0.8 }} />
-                      )}
+
+                      {index < stats.pdvLegalDetails.length - 1 && <Divider sx={{ borderStyle: 'dashed', mt: 0.8 }} />}
                     </Box>
                   ))}
                 </Box>
@@ -201,10 +215,10 @@ const UserListCards = () => {
         </Card>
       </Grid>
 
-      {/* --- CARD 4: VOEPDV --- */}
+      {/* --- CARD 4: VoeCRM --- */}
       <Grid size={{ xs: 12, sm: 6, md: 3 }}>
         <CardEstatisticaSimples
-          title='VoePDV'
+          title='Voepdv'
           stats='0'
           icon='tabler-devices-pc'
           color='primary'
@@ -212,7 +226,6 @@ const UserListCards = () => {
           loading={loading}
         />
       </Grid>
-
     </Grid>
   )
 }

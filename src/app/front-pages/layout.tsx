@@ -27,9 +27,9 @@ import '@/app/globals.css'
 import '@assets/iconify-icons/generated-icons.css'
 
 export const metadata = {
-  title: 'VOEPDV Admin Dashboard Template',
+  title: 'VoeCRM',
   description:
-    'VOEPDV - MUI Next.js Admin Dashboard Template - is the most developer friendly & highly customizable Admin Dashboard Template based on MUI v5.'
+    'VoeCRM - é uma aplicação web para empresas Saas que oferece um painel administrativo completo com funcionalidades de gestão de clientes, produtos, vendas e relatórios analíticos.'
 }
 
 const Layout = async ({ children }: ChildrenType) => {

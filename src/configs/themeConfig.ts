@@ -54,7 +54,7 @@ export type Config = {
 }
 
 const themeConfig: Config = {
-  templateName: 'VoePDV',
+  templateName: 'VoeCRM',
   homePageUrl: '/dashboards/crm',
   settingsCookieName: 'vuexy-mui-next-demo-1',
   mode: 'dark', // 'system', 'light', 'dark'
