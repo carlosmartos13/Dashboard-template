@@ -1,9 +1,23 @@
-Dockerfile
-.dockerignore
+# Ignore dependencies
 node_modules
-npm-debug.log
-README.md
-.next
-.git
-.env*
+
+# Ignore Docker and VSCode specific files
+.dockerignore
+Dockerfile
 docker-compose.yml
+docker-compose.dev.yml
+.vscode
+
+# Ignore build output
+.next
+build
+dist
+
+# Ignore other
+*.log
+.env
+.env*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm

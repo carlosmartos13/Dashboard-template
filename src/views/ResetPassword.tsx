@@ -5,7 +5,7 @@ import { useState } from 'react'
 
 // Next Imports
 import Link from 'next/link'
-import { useParams, useRouter, useSearchParams } from 'next/navigation' // <--- useSearchParams é essencial aqui
+import { useParams, useRouter } from 'next/navigation'
 
 // MUI Imports
 import useMediaQuery from '@mui/material/useMediaQuery'
@@ -59,7 +59,7 @@ const MaskImg = styled('img')({
   zIndex: -1
 })
 
-const ResetPassword = ({ mode }: { mode: SystemMode }) => {
+const ResetPassword = ({ mode, token }: { mode: SystemMode; token?: string }) => {
   // States
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -71,8 +71,6 @@ const ResetPassword = ({ mode }: { mode: SystemMode }) => {
 
   // Hooks
   const router = useRouter()
-  const searchParams = useSearchParams() // <--- Captura o ?token=xyz da URL
-  const token = searchParams.get('token')
 
   const { lang: locale } = useParams()
   const { settings } = useSettings()

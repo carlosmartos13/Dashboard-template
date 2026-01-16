@@ -39,6 +39,7 @@
     "@mui/lab": "7.0.1-beta.19",
     "@mui/material": "7.3.5",
     "@mui/material-nextjs": "7.3.5",
+    "@mui/utils": "^7.3.5",
     "@prisma/adapter-pg": "^7.2.0",
     "@prisma/client": "^7.2.0",
     "@reduxjs/toolkit": "2.10.1",

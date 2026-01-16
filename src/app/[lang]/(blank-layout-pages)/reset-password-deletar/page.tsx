@@ -12,11 +12,11 @@ export const metadata = {
 }
 
 // 1. Adicione a palavra 'async' aqui antes dos parênteses
-const ResetPasswordPage = async () => {
+const ResetPasswordPage = async ({ searchParams }: { searchParams: { token?: string } }) => {
   // 2. Adicione a palavra 'await' aqui para esperar o valor chegar
   const mode = await getServerMode()
 
-  return <ResetPassword mode={mode} />
+  return <ResetPassword mode={mode} token={searchParams?.token} />
 }
 
 export default ResetPasswordPage
