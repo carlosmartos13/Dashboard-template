@@ -7,21 +7,26 @@ services:
     ports:
       - '3001:3000'
       - '5555:5555'
+      - '51212:51212'
     volumes:
       - .:/app
-      - /app/node_modules # Evita conflito entre node_modules do host (Windows) e container (Linux)
+      - voecrm_node_modules:/app/node_modules # Volume persistente para performance máxima
     env_file:
       - .env
+    environment:
+      - CI=true # Força o pnpm a rodar sem interatividade (corrige erro de TTY)
     depends_on:
       - postgres
     # Instala dependências antes de rodar o dev server para garantir que tudo esteja sincronizado
-    command: sh -c "pnpm install && pnpm dev"
+    command: sh -c "pnpm install --no-frozen-lockfile && pnpm dev"
 
   postgres:
     image: postgres:15-alpine
     container_name: voecrm-db-dev
-    env_file:
-      - .env
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=voecrm
     volumes:
       - postgres_data_dev:/var/lib/postgresql/data
     ports:
@@ -30,3 +35,4 @@ services:
 
 volumes:
   postgres_data_dev:
+  voecrm_node_modules: # Declaração do volume persistente

@@ -160,5 +160,21 @@
   "prisma": {
     "schema": "./src/prisma/schema.prisma",
     "config": "./prisma.config.ts"
+  },
+  "pnpm": {
+    "supportedArchitectures": {
+      "os": [
+        "current",
+        "linux"
+      ],
+      "cpu": [
+        "current",
+        "x64"
+      ],
+      "libc": [
+        "current",
+        "musl"
+      ]
+    }
   }
 }

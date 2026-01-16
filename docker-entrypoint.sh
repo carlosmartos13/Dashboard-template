@@ -14,7 +14,7 @@ npx prisma migrate deploy
 
 # 3. Executa o seed/criação de admin (Garante que o usuário inicial exista)
 echo "🌱 Verificando usuário Admin..."
-npx ts-node create-admin.ts
+npx --yes tsx create-admin.ts
 
 # 4. Executa o comando original do container (ex: npm run dev ou npm start)
 echo "🏁 Iniciando a aplicação..."
