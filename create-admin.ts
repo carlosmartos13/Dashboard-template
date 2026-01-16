@@ -2,17 +2,30 @@
 
 import { Role } from './src/generated/prisma/enums'
 import * as dotenv from 'dotenv'
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient } from './src/generated/prisma/client'
+import { Pool } from 'pg' // Import Pool from 'pg'
+import { PrismaPg } from '@prisma/adapter-pg' // Import PrismaPg adapter
+
+// Ensure dotenv is configured early
+dotenv.config()
+
+// Create a new pg Pool
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+})
+
+// Instantiate the PrismaPg adapter
+const adapter = new PrismaPg(pool)
+
 const globalForPrisma = global as unknown as {
   prisma: PrismaClient | undefined
 }
 export const prisma =
   globalForPrisma.prisma ||
   new PrismaClient({
-    log: ['query', 'info', 'warn', 'error'] // Optional: logs queries to the console
+    adapter, // Pass the adapter here
+    log: ['query', 'info', 'warn', 'error']
   })
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
-dotenv.config()
 
 // Em vez de importar o 'prisma' da sua lib, vamos instanciar um novo aqui
 // para garantir que ele use o binário local do container

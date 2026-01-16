@@ -21,11 +21,19 @@ COPY . .
 CMD ["npm", "run", "dev"]
 
 # Stage 3: Builder - Creates the production build
-FROM base AS builder
-ENV NODE_ENV=production
-COPY . .
-# Generate icons and build the application
+    FROM base AS builder
+    ENV NODE_ENV=production
+    ENV PRISMA_CLIENT_ENGINE_TYPE=binary
+    COPY . .
+# Generate icons
 RUN npm run build:icons
+# Explicitly generate Prisma client using pnpm
+    RUN pnpm prisma generate
+    # Debugging: List contents of generated Prisma client after generation
+    RUN ls -l /app/src/generated/prisma/
+
+
+# Build the application
 RUN npm run build
 
 # Stage 4: Production - A lean, production-ready image
@@ -41,6 +49,7 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder /app/prisma ./prisma
 
 # The server.js file from the standalone output is the entrypoint
 USER nextjs
