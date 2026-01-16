@@ -1,6 +1,6 @@
 # Ignore dependencies
 node_modules
-
+pnpm-store
 # Ignore Docker and VSCode specific files
 .dockerignore
 Dockerfile

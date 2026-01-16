@@ -6,7 +6,7 @@ services:
     container_name: voecrm-dev
     ports:
       - '3001:3000'
-      - '51212:51212'
+      - '5555:5555'
     volumes:
       - .:/app
     environment:

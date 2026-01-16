@@ -5,6 +5,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "docker:dev": "docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d",
+    "docker:studio": "docker exec -it voecrm-dev npx prisma studio --port 51212 --hostname 0.0.0.0",
+    "docker:migrate": "docker exec -it voecrm-dev npx prisma migrate dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",

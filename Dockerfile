@@ -8,8 +8,8 @@ RUN npm install -g pnpm
 COPY package.json pnpm-lock.yaml ./
 COPY prisma ./prisma
 COPY src/assets ./src/assets
-# Use 'pnpm install --frozen-lockfile' for reproducible builds
-RUN pnpm install --frozen-lockfile
+COPY docker-entrypoint.sh /usr/local/bin/
+
 
 # Stage 2: Development - For hot-reloading
 FROM base AS dev
@@ -18,6 +18,9 @@ ENV NODE_ENV=development
 # but it's good practice for consistency.
 COPY . .
 # 'npm run dev' will be started by docker-compose
+RUN pnpm install --frozen-lockfile
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["npm", "run", "dev"]
 
 # Stage 3: Builder - Creates the production build
@@ -25,6 +28,8 @@ CMD ["npm", "run", "dev"]
     ENV NODE_ENV=production
     ENV PRISMA_CLIENT_ENGINE_TYPE=binary
     COPY . .
+    # Instala todas as dependências (incluindo dev) para permitir o build
+    RUN pnpm install --frozen-lockfile --prod=false
 # Generate icons
 RUN npm run build:icons
 # Explicitly generate Prisma client using pnpm

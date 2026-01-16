@@ -50,5 +50,6 @@
     "iconify",
     "tanstack"
   ],
-  "search.useParentIgnoreFiles": true
+  "search.useParentIgnoreFiles": true,
+  "git.ignoreLimitWarning": true
 }
